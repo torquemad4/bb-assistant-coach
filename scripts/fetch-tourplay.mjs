@@ -23,6 +23,18 @@
 import { writeFile, mkdir } from 'node:fs/promises'
 import { dirname } from 'node:path'
 
+/**
+ * Tourplay spells races like `OldWorldAlliance_BB2025`. Strip the rules-version
+ * suffix and split the camel case back into the names the app uses.
+ */
+function raceName(teamRace) {
+  if (!teamRace) return null
+  return teamRace
+    .replace(/_BB\d+$/i, '')
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .trim()
+}
+
 const BASE = 'https://tourplay.net'
 
 const HEADERS = {
@@ -95,7 +107,12 @@ async function main() {
       `api/inscriptions/${slug}/category/${category.id}/inscriptions`,
       slug,
     )
-    for (const rows of Object.values(payload[String(category.id)] ?? {})) {
+    // Team tournaments nest inscriptions by squad id; individual ones return a
+    // flat list under the category. Handle both.
+    const inner = payload[String(category.id)] ?? {}
+    const groups = Array.isArray(inner) ? [inner] : Object.values(inner)
+
+    for (const rows of groups) {
       for (const row of rows) {
         const name = row.squad?.name ?? '(no squad)'
         if (!squads.has(name)) squads.set(name, [])
@@ -106,9 +123,10 @@ async function main() {
           country: row.player?.country ?? null,
           rankOverall: row.coachRank?.rankOverall ?? null,
           score: row.coachRank?.score ?? null,
-          // Only meaningful once rosters are submitted; until then it is the
-          // squad's own name rather than a Blood Bowl team.
-          roster: row.roster?.teamName ?? null,
+          // Both are null until the coach submits a roster, which happens
+          // close to the event.
+          teamName: row.roster?.teamName ?? null,
+          race: raceName(row.roster?.teamRace),
         })
       }
     }
@@ -130,12 +148,13 @@ async function main() {
   }
 
   const listed = [...squads.values()].reduce((n, rows) => n + rows.length, 0)
+  const withRace = [...squads.values()].flat().filter((r) => r.race).length
 
   console.log(`${result.tournament.name} (${result.tournament.slug}, id ${result.tournament.id})`)
   console.log(
     `${result.tournament.initDate?.slice(0, 10)} → ${result.tournament.finishDate?.slice(0, 10)}, ${result.tournament.country}`,
   )
-  console.log(`${squads.size} squads, ${listed} coaches listed`)
+  console.log(`${squads.size} squad(s), ${listed} coaches listed, ${withRace} with a race submitted`)
   if (result.tournament.coachesRegistered > listed) {
     console.log(
       `note: the tournament claims ${result.tournament.coachesRegistered} registered — ` +
@@ -146,7 +165,8 @@ async function main() {
   for (const [name, rows] of [...squads].sort(([a], [b]) => a.localeCompare(b))) {
     console.log(`${name}  (${rows.length})`)
     for (const r of rows) {
-      console.log(`    ${(r.coach ?? '?').padEnd(24)} NAF ${String(r.nafNumber ?? '-').padStart(7)}`)
+      const race = r.race ? `  ${r.race}` : ''
+      console.log(`    ${(r.coach ?? '?').padEnd(26)} NAF ${String(r.nafNumber ?? '-').padStart(7)}${race}`)
     }
   }
 
