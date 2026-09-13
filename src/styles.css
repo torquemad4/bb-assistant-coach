@@ -28,6 +28,12 @@
   --level: #8b949e;
   --level-soft: rgba(139, 148, 158, 0.12);
 
+  /* Unsaved work. Deliberately outside the team and outlook palettes so a
+     pending save never reads as a match result. */
+  --pending: #f0b429;
+  --pending-soft: rgba(240, 180, 41, 0.15);
+  --pending-ink: #2a1d00;
+
   --radius: 10px;
   --radius-sm: 7px;
   --tap: 56px;
@@ -1052,4 +1058,139 @@ h1 {
   .ctl-row__cell--pair {
     flex-direction: row;
   }
+}
+
+/* ---------- persistence: save, dirty state, connection ---------- */
+
+.app--bare {
+  align-items: center;
+  justify-content: center;
+}
+
+.bare__message {
+  color: var(--ink-dim);
+  font-size: 0.95rem;
+}
+
+.topbar__dirty {
+  margin-left: 10px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--pending-soft);
+  color: var(--pending);
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.offline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin: 0 clamp(10px, 1.4vw, 16px);
+  margin-top: clamp(10px, 1.4vw, 16px);
+  padding: 10px 14px;
+  background: var(--down-soft);
+  border: 1px solid rgba(248, 81, 73, 0.35);
+  border-radius: var(--radius);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.offline__retry {
+  flex: none;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid rgba(248, 81, 73, 0.5);
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  font-weight: 650;
+}
+
+.offline__retry:hover {
+  background: rgba(248, 81, 73, 0.12);
+}
+
+.control__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.control__save {
+  min-height: 44px;
+  padding: 0 20px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: var(--bg-sunken);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--ink-dim);
+  font-variant-numeric: tabular-nums;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+
+/* Unsaved work is the one thing on this screen that should pull the eye — in
+   the pending colour, not the outlook green, which means "England ahead". */
+.control__save.is-dirty:not(:disabled) {
+  background: var(--pending);
+  border-color: var(--pending);
+  color: var(--pending-ink);
+}
+
+.control__save.is-dirty:not(:disabled):hover {
+  background: #ffc846;
+}
+
+.control__save:disabled {
+  color: var(--ink-faint);
+  cursor: default;
+}
+
+.control__reset:disabled {
+  color: #3a424f;
+  border-color: var(--line-soft);
+  cursor: default;
+}
+
+.control__error,
+.control__saved {
+  margin: 0;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.control__error {
+  background: var(--down-soft);
+  border: 1px solid rgba(248, 81, 73, 0.35);
+  color: #ffb4b0;
+}
+
+.control__saved {
+  color: var(--ink-faint);
+  padding: 0 14px;
+}
+
+.ctl-row--dirty {
+  border-color: rgba(240, 180, 41, 0.45);
+}
+
+.ctl-row__board {
+  position: relative;
+}
+
+.ctl-row__dot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--pending);
+  border: 2px solid var(--bg-raised);
 }

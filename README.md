@@ -131,6 +131,57 @@ anything — it is what stops a red England column reading as a losing table.
 Flags are inline SVG in `src/components/Flag.tsx`; adding a nation means adding a
 case there and a member to `CountryCode`.
 
+## Persistence
+
+The round lives in a Cloudflare **D1** database, `bb-coordinator`
+(`505406d3-dc0a-4e94-ae30-17a295a506db`, Western Europe). The Worker exposes a
+small API and the client saves explicitly — nothing is written while you tap.
+
+| Route | Does |
+| --- | --- |
+| `GET /api/round` | Reads the whole round |
+| `PUT /api/round` | Writes the match state of every board in one batch |
+
+`run_worker_first: ["/api/*"]` in `wrangler.jsonc` routes those paths to the
+Worker; everything else is served from `dist/` with SPA handling. Without that,
+SPA fallback would return `index.html` for API calls.
+
+**A save writes only the match state** — score, casualties, half, outlook. The
+roster is in the same tables but is never written from the client, so editing a
+coach directly in D1 cannot be reverted by a tablet still showing the old
+line-up. Changing the roster is a SQL update, not a deploy.
+
+The Worker validates every field before writing, and the tables carry matching
+`CHECK` constraints, so a bad value is rejected in two places rather than stored.
+A save is a single `batch`, so it lands whole or not at all.
+
+**Unsaved work** is tracked by comparing on-screen state to what the server last
+confirmed. Changed rows are outlined and dotted, the Save button counts them, and
+closing the tab mid-edit warns. **Discard** reverts to the last saved state.
+
+**Watchers** poll every 10s so a second device stays current. Polling pauses
+while there are unsaved edits, so a refresh can never wipe work in progress.
+
+If the API cannot be reached the app falls back to the committed fixture, shows a
+banner, and disables editing — saving into a round it could not read would be
+worse than not saving.
+
+### Migrations
+
+`migrations/` holds the schema and seed. Apply with:
+
+```bash
+npm run db:migrate          # --remote, the live database
+npx wrangler d1 migrations apply bb-coordinator --local   # local dev copy
+```
+
+### Local development
+
+```bash
+npm run build
+npx wrangler dev --local    # serves dist/ and the API against a local D1
+```
+
 ## Shape of the code
 
 | Path | What lives there |
@@ -138,14 +189,16 @@ case there and a member to `CountryCode`.
 | `src/types.ts` | Domain model, plus the outlook scale and its bounds |
 | `src/data/round.ts` | The seed round — **the only file holding coach names** |
 | `src/data/races.ts` | Blood Bowl 2020 races and their short tags |
-| `src/state/useRound.ts` | Single source of truth; all mutation goes through here |
+| `src/state/useRound.ts` | Single source of truth; load, dirty tracking, save, polling |
+| `src/api.ts` | Typed client for the two API routes |
+| `worker/index.ts` | The API — validation and D1 access |
+| `migrations/` | Schema and seed |
 | `src/components/` | Dashboard, BoardCard, RoundOutlook, ControlPanel, Stepper |
 
-Score, casualties and half are held as ordinary state in `useRound`, deliberately
-separate from `outlook`. That split is the seam for the Tourplay integration:
-a feed adapter replaces the seed values and pushes into the same setters, while
-`outlook` stays coach-entered and never comes from the feed. `Board.tourplayMatchId`
-is the join key, null while running on seed data.
+Score, casualties and half are held separately from `outlook`, which is the seam
+for the Tourplay integration: a feed adapter writes the match state — ideally
+straight into D1 — while `outlook` stays coach-entered and never comes from the
+feed. `Board.tourplayMatchId` is the join key, null until a feed fills it in.
 
 ## Known gaps in this prototype
 

@@ -13,7 +13,15 @@ const TABS: { id: Tab; label: string }[] = [
 export default function App() {
   const [tab, setTab] = useState<Tab>('dashboard')
   const controller = useRound()
-  const { round } = controller
+  const { round, connection, loadError, isDirty, reload } = controller
+
+  if (connection === 'loading') {
+    return (
+      <div className="app app--bare">
+        <p className="bare__message">Loading the round…</p>
+      </div>
+    )
+  }
 
   return (
     <div className="app">
@@ -22,6 +30,7 @@ export default function App() {
           <h1>Round Coordinator</h1>
           <p className="topbar__sub">
             Round {round.roundNumber} of {round.totalRounds} · {round.boards.length} boards live
+            {isDirty && <span className="topbar__dirty">unsaved changes</span>}
           </p>
         </div>
 
@@ -39,6 +48,18 @@ export default function App() {
           ))}
         </nav>
       </header>
+
+      {connection === 'offline' && (
+        <div className="offline" role="alert">
+          <span>
+            <strong>Not connected to the database.</strong> Showing the last committed line-up;
+            edits are disabled so nothing is lost. {loadError}
+          </span>
+          <button type="button" className="offline__retry" onClick={reload}>
+            Retry
+          </button>
+        </div>
+      )}
 
       <main className="stage">
         {tab === 'dashboard' ? <Dashboard {...controller} /> : <ControlPanel {...controller} />}

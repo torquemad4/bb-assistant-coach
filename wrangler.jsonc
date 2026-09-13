@@ -2,12 +2,22 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "bb-round-coordinator",
   "compatibility_date": "2026-09-13",
-  // Static-asset Worker: no server code, `dist/` is served directly.
+  "main": "./worker/index.ts",
   "assets": {
     "directory": "./dist",
-    // The app is one page with client-side tabs, so any path serves index.html.
-    "not_found_handling": "single-page-application"
+    "binding": "ASSETS",
+    // The app is one page with client-side tabs, so any unmatched path serves
+    // index.html — except /api/*, which must reach the Worker instead.
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
   },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "bb-coordinator",
+      "database_id": "505406d3-dc0a-4e94-ae30-17a295a506db"
+    }
+  ],
   // Wrangler creates the DNS record for this hostname on deploy, provided the
   // englandbb.co.uk zone sits on the same Cloudflare account.
   "routes": [

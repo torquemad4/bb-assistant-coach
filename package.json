@@ -6,17 +6,19 @@
   "description": "Tablet dashboard for coordinating team Blood Bowl events",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && tsc -p tsconfig.worker.json && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc -b --noEmit",
+    "typecheck": "tsc -b --noEmit && tsc -p tsconfig.worker.json",
     "deploy": "npm run build && wrangler deploy",
-    "cf-login": "wrangler login"
+    "cf-login": "wrangler login",
+    "db:migrate": "wrangler d1 migrations apply bb-coordinator --remote"
   },
   "dependencies": {
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260911.1",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.4",

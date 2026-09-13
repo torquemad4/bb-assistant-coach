@@ -12,6 +12,8 @@ interface StepperProps {
   tone?: 'up' | 'down' | 'level' | 'plain'
   /** Tints the control in a team colour so an A/B pair is told apart at a glance. */
   team?: 'a' | 'b'
+  /** Locks the control — used when the round could not be read from the database. */
+  disabled?: boolean
 }
 
 /**
@@ -28,13 +30,14 @@ export function Stepper({
   atMax = false,
   tone = 'plain',
   team,
+  disabled = false,
 }: StepperProps) {
   const up = (
     <button
       type="button"
       className="stepper__btn stepper__btn--up"
       onClick={() => onStep(1)}
-      disabled={atMax}
+      disabled={disabled || atMax}
       aria-label={`Increase ${label}`}
     >
       {arrows ? '▲' : '+'}
@@ -46,7 +49,7 @@ export function Stepper({
       type="button"
       className="stepper__btn stepper__btn--down"
       onClick={() => onStep(-1)}
-      disabled={atMin}
+      disabled={disabled || atMin}
       aria-label={`Decrease ${label}`}
     >
       {arrows ? '▼' : '−'}

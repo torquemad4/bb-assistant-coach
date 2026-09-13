@@ -17,12 +17,15 @@ interface RowProps {
 }
 
 function ControlRow({ board, controller, countryA, countryB }: RowProps) {
-  const { nudgeOutlook, nudgeScore, nudgeInjuries, setHalf } = controller
+  const { nudgeOutlook, nudgeScore, nudgeInjuries, setHalf, connection, dirtyBoardIds } = controller
+  const locked = connection !== 'live'
+  const dirty = dirtyBoardIds.includes(board.id)
 
   return (
-    <div className="ctl-row">
+    <div className={`ctl-row${dirty ? ' ctl-row--dirty' : ''}`}>
       <div className="ctl-row__board">
         <span className="ctl-row__number">{board.id}</span>
+        {dirty && <span className="ctl-row__dot" title="Unsaved changes" />}
       </div>
 
       <div className="ctl-row__names">
@@ -45,6 +48,7 @@ function ControlRow({ board, controller, countryA, countryB }: RowProps) {
       <div className="ctl-row__cell ctl-row__cell--pair">
         <Stepper
           team="a"
+          disabled={locked}
           label={`board ${board.id} team A score`}
           display={String(board.a.score)}
           atMin={board.a.score === 0}
@@ -52,6 +56,7 @@ function ControlRow({ board, controller, countryA, countryB }: RowProps) {
         />
         <Stepper
           team="b"
+          disabled={locked}
           label={`board ${board.id} team B score`}
           display={String(board.b.score)}
           atMin={board.b.score === 0}
@@ -62,6 +67,7 @@ function ControlRow({ board, controller, countryA, countryB }: RowProps) {
       <div className="ctl-row__cell ctl-row__cell--pair">
         <Stepper
           team="a"
+          disabled={locked}
           label={`board ${board.id} team A casualties`}
           display={String(board.a.injuries)}
           atMin={board.a.injuries === 0}
@@ -69,6 +75,7 @@ function ControlRow({ board, controller, countryA, countryB }: RowProps) {
         />
         <Stepper
           team="b"
+          disabled={locked}
           label={`board ${board.id} team B casualties`}
           display={String(board.b.injuries)}
           atMin={board.b.injuries === 0}
@@ -84,6 +91,7 @@ function ControlRow({ board, controller, countryA, countryB }: RowProps) {
               type="button"
               className={`halves__btn${board.half === half ? ' is-active' : ''}`}
               onClick={() => setHalf(board.id, half)}
+              disabled={locked}
               aria-pressed={board.half === half}
             >
               {half === 1 ? '1st' : '2nd'}
@@ -95,6 +103,7 @@ function ControlRow({ board, controller, countryA, countryB }: RowProps) {
       <div className="ctl-row__cell ctl-row__cell--outlook">
         <Stepper
           arrows
+          disabled={locked}
           label={`board ${board.id} outlook`}
           display={signed(board.outlook)}
           tone={toneOf(board.outlook)}
@@ -108,16 +117,23 @@ function ControlRow({ board, controller, countryA, countryB }: RowProps) {
 }
 
 /** Tab two: every mutable value for the round, one row per board. */
+function saveLabel(controller: RoundController): string {
+  if (controller.saving) return 'Saving…'
+  const count = controller.dirtyBoardIds.length
+  if (count === 0) return 'Saved'
+  return `Save ${count} board${count === 1 ? '' : 's'}`
+}
+
 export function ControlPanel(controller: RoundController) {
-  const { round, aggregate, reset } = controller
+  const { round, aggregate, discard, save, saving, isDirty, saveError, lastSavedAt, connection } =
+    controller
 
   return (
     <div className="control">
       <div className="control__bar">
         <p className="control__hint">
-          Score, casualties and half stand in for the live Tourplay feed. Outlook steps by 0.5,
-          clamped to −1.0 … +1.0 — positive favours {round.teamA.name}, negative favours{' '}
-          {round.teamB.name}.
+          Outlook steps by 0.5, clamped to −1.0 … +1.0 — positive favours {round.teamA.name},
+          negative favours {round.teamB.name}. Nothing is written until you save.
         </p>
         <div className="control__total">
           <span className="control__total-label">Aggregate</span>
@@ -125,10 +141,38 @@ export function ControlPanel(controller: RoundController) {
             {signed(aggregate)}
           </span>
         </div>
-        <button type="button" className="control__reset" onClick={reset}>
-          Reset round
-        </button>
+        <div className="control__actions">
+          <button
+            type="button"
+            className="control__reset"
+            onClick={discard}
+            disabled={!isDirty || saving}
+          >
+            Discard
+          </button>
+          <button
+            type="button"
+            className={`control__save${isDirty ? ' is-dirty' : ''}`}
+            onClick={save}
+            disabled={!isDirty || saving || connection !== 'live'}
+          >
+            {saveLabel(controller)}
+          </button>
+        </div>
       </div>
+
+      {saveError && (
+        <p className="control__error" role="alert">
+          Save failed — your changes are still here, try again. {saveError}
+        </p>
+      )}
+
+      {!saveError && lastSavedAt && !isDirty && (
+        <p className="control__saved">
+          Saved at{' '}
+          {lastSavedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        </p>
+      )}
 
       <div className="ctl-head" aria-hidden="true">
         <span className="ctl-head__board">#</span>

@@ -72,6 +72,8 @@ export interface Board {
 
 /** A whole round: two teams, up to eight boards. */
 export interface Round {
+  /** When the database last accepted a save. Absent when running on the fixture. */
+  updatedAt?: string
   roundNumber: number
   /** Total rounds in the event, for the "Round 3 of 6" caption. */
   totalRounds: number
