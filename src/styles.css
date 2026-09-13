@@ -1,3 +1,14 @@
+/* Self-hosted rather than loaded from Google's CDN: this runs in tournament
+   halls, where a blocked or slow third-party request would leave the display
+   type falling back mid-event. 5.6 KB, served from our own origin. */
+@font-face {
+  font-family: 'Squada One';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/squada-one-latin.woff2') format('woff2');
+}
+
 /* ------------------------------------------------------------------
    Theme tokens.
 
@@ -57,6 +68,12 @@
   --radius: 10px;
   --radius-sm: 7px;
   --tap: 56px;
+
+  /* Display face for headings and the result letters. Deliberately NOT used for
+     scores or the aggregate: Squada One's "1" is a bare vertical stem, so at
+     scoreboard size "1 - 1" reads as "I - I". Single weight, so anything using
+     it sets font-weight 400 — asking for bold would synthesise one. */
+  --font-display: 'Squada One', 'Haettenschweiler', 'Arial Narrow Bold', sans-serif;
 }
 
 /* Dark, for viewers who have chosen nothing but whose system is dark. */
@@ -180,9 +197,11 @@ button {
 
 h1 {
   margin: 0;
-  font-size: clamp(1rem, 1.6vw, 1.35rem);
-  font-weight: 700;
-  letter-spacing: -0.01em;
+  font-family: var(--font-display);
+  font-size: clamp(1.25rem, 2vw, 1.7rem);
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  line-height: 1.1;
 }
 
 /* ---------- shell ---------- */
@@ -1627,10 +1646,11 @@ h1 {
   flex: 1;
   display: grid;
   place-items: center;
-  font-size: clamp(3rem, min(6vw, 18vh), 8rem);
-  font-weight: 800;
+  font-family: var(--font-display);
+  font-size: clamp(3.4rem, min(7vw, 20vh), 9rem);
+  font-weight: 400;
   line-height: 1;
-  letter-spacing: -0.02em;
+  letter-spacing: 0.02em;
 }
 
 .ft--w {

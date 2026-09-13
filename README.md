@@ -131,6 +131,22 @@ Calling **FT** settles the board:
 The server derives the FT outlook from the submitted scores and ignores whatever
 the client sent, so two tablets cannot disagree about a finished game.
 
+## Typography
+
+Headings and the W/D/L result letters use **Squada One**, self-hosted from
+`public/fonts/` rather than loaded from Google's CDN — this runs in tournament
+halls, where a blocked or slow third-party request would drop the display type
+mid-event. The file is 5.6 KB.
+
+It is deliberately **not** used for scores or the round aggregate. Squada One's
+`1` is a bare vertical stem with no flag or base, so at scoreboard size `1 - 1`
+reads as `I - I`. Numbers stay on the UI face, which is the more important job
+on this screen. If the display face ever changes, check its digits before
+extending it to the figures.
+
+Squada One has a single weight, so anything using `--font-display` sets
+`font-weight: 400`; asking for bold would get a synthesised one.
+
 ## Theming
 
 The app has a **light and a dark theme**, with a toggle in the top bar cycling
