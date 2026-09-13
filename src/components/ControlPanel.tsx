@@ -1,8 +1,9 @@
 import { RACE_TAG, type Race } from '../data/races'
 import { signed, toneOf } from '../format'
+import { Flag } from './Flag'
 import { Stepper } from './Stepper'
 import type { RoundController } from '../state/useRound'
-import { OUTLOOK_MAX, OUTLOOK_MIN, type Board } from '../types'
+import { OUTLOOK_MAX, OUTLOOK_MIN, type Board, type CountryCode } from '../types'
 
 function raceTag(race: string): string {
   return RACE_TAG[race as Race] ?? race.slice(0, 4).toUpperCase()
@@ -11,9 +12,11 @@ function raceTag(race: string): string {
 interface RowProps {
   board: Board
   controller: RoundController
+  countryA: CountryCode
+  countryB: CountryCode
 }
 
-function ControlRow({ board, controller }: RowProps) {
+function ControlRow({ board, controller, countryA, countryB }: RowProps) {
   const { nudgeOutlook, nudgeScore, nudgeInjuries, setHalf } = controller
 
   return (
@@ -23,13 +26,19 @@ function ControlRow({ board, controller }: RowProps) {
       </div>
 
       <div className="ctl-row__names">
-        <div className="ctl-name ctl-name--a">
+        <div className={`ctl-name ctl-name--a${board.a.vacant ? ' ctl-name--vacant' : ''}`}>
+          {!board.a.vacant && <Flag country={countryA} />}
           <span className="ctl-name__handle">{board.a.nafName}</span>
-          <span className="ctl-name__race">{raceTag(board.a.race)}</span>
+          <span className="ctl-name__race">
+            {board.a.vacant ? 'seat unfilled' : raceTag(board.a.race)}
+          </span>
         </div>
-        <div className="ctl-name ctl-name--b">
+        <div className={`ctl-name ctl-name--b${board.b.vacant ? ' ctl-name--vacant' : ''}`}>
+          {!board.b.vacant && <Flag country={countryB} />}
           <span className="ctl-name__handle">{board.b.nafName}</span>
-          <span className="ctl-name__race">{raceTag(board.b.race)}</span>
+          <span className="ctl-name__race">
+            {board.b.vacant ? 'seat unfilled' : raceTag(board.b.race)}
+          </span>
         </div>
       </div>
 
@@ -107,7 +116,8 @@ export function ControlPanel(controller: RoundController) {
       <div className="control__bar">
         <p className="control__hint">
           Score, casualties and half stand in for the live Tourplay feed. Outlook steps by 0.5,
-          clamped to −1.0 … +1.0.
+          clamped to −1.0 … +1.0 — positive favours {round.teamA.name}, negative favours{' '}
+          {round.teamB.name}.
         </p>
         <div className="control__total">
           <span className="control__total-label">Aggregate</span>
@@ -123,15 +133,25 @@ export function ControlPanel(controller: RoundController) {
       <div className="ctl-head" aria-hidden="true">
         <span className="ctl-head__board">#</span>
         <span>Coaches</span>
-        <span>Score A / B</span>
-        <span>Casualties A / B</span>
+        <span>
+          Score {round.teamA.name} / {round.teamB.name}
+        </span>
+        <span>
+          Casualties {round.teamA.name} / {round.teamB.name}
+        </span>
         <span>Half</span>
         <span>Outlook</span>
       </div>
 
       <div className="ctl-rows">
         {round.boards.map((board) => (
-          <ControlRow key={board.id} board={board} controller={controller} />
+          <ControlRow
+            key={board.id}
+            board={board}
+            controller={controller}
+            countryA={round.teamA.country}
+            countryB={round.teamB.country}
+          />
         ))}
       </div>
     </div>

@@ -1,6 +1,7 @@
 import { RACE_TAG, type Race } from '../data/races'
 import { signed, toneOf } from '../format'
-import type { Board, Side } from '../types'
+import { Flag } from './Flag'
+import type { Board, CountryCode, Side } from '../types'
 
 function raceTag(race: string): string {
   return RACE_TAG[race as Race] ?? race.slice(0, 4).toUpperCase()
@@ -9,24 +10,36 @@ function raceTag(race: string): string {
 interface SideRowProps {
   side: Side
   team: 'a' | 'b'
+  country: CountryCode
 }
 
-function SideRow({ side, team }: SideRowProps) {
+function SideRow({ side, team, country }: SideRowProps) {
   return (
-    <div className={`side side--${team}`}>
+    <div className={`side side--${team}${side.vacant ? ' side--vacant' : ''}`}>
       <div className="side__name" title={side.nafName}>
-        {side.nafName}
+        {!side.vacant && <Flag country={country} />}
+        <span className="side__handle">{side.nafName}</span>
       </div>
-      <div className="side__race" title={side.race}>
-        <span className="side__race-tag">{raceTag(side.race)}</span>
-        <span className="side__race-full">{side.race}</span>
-      </div>
+      {side.vacant ? (
+        <div className="side__race side__race--vacant">Seat unfilled</div>
+      ) : (
+        <div className="side__race" title={side.race}>
+          <span className="side__race-tag">{raceTag(side.race)}</span>
+          <span className="side__race-full">{side.race}</span>
+        </div>
+      )}
     </div>
   )
 }
 
+interface BoardCardProps {
+  board: Board
+  countryA: CountryCode
+  countryB: CountryCode
+}
+
 /** One vertical board column: coach A on top, score in the middle, coach B below. */
-export function BoardCard({ board }: { board: Board }) {
+export function BoardCard({ board, countryA, countryB }: BoardCardProps) {
   const tone = toneOf(board.outlook)
 
   return (
@@ -38,7 +51,7 @@ export function BoardCard({ board }: { board: Board }) {
         </span>
       </header>
 
-      <SideRow side={board.a} team="a" />
+      <SideRow side={board.a} team="a" country={countryA} />
 
       <div className="board__score" aria-label="Score">
         <span className="board__score-value">{board.a.score}</span>
@@ -46,7 +59,7 @@ export function BoardCard({ board }: { board: Board }) {
         <span className="board__score-value">{board.b.score}</span>
       </div>
 
-      <SideRow side={board.b} team="b" />
+      <SideRow side={board.b} team="b" country={countryB} />
 
       <footer className="board__foot">
         <div className="cas" aria-label="Casualties suffered">

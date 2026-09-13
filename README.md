@@ -17,8 +17,8 @@ npm run typecheck
 
 ## The two tabs
 
-**Dashboard** — one column per board, up to eight. Each column carries the team A
-coach (NAF name + race) above the score, the team B coach below it, casualties
+**Dashboard** — one column per board, up to eight. Each column carries the England
+coach (flag, NAF name, race) above the score, the Italy coach below it, casualties
 suffered by each side, and a first/second half pill. The frame across the bottom
 gives the round-level number: a plain sum of all eight match outlooks, so it runs
 from −8.0 to +8.0. The per-board strip beside it lets you read that sum back to
@@ -28,6 +28,28 @@ its parts.
 (they stand in for the live feed, see below). The outlook stepper moves in 0.5
 increments and clamps to −1.0 … +1.0; the arrow disables at each end rather than
 silently no-opping. Positive outlook favours team A, negative favours team B.
+
+## Teams and colour
+
+The fixture is locked to **England v Italy**. England is team A (positive outlook
+favours them), Italy is team B.
+
+The team colours have to sit next to the semantic red/green that mean *behind* and
+*ahead*, so they are separated on both hue and saturation, and by role:
+
+| Role | Token | Value | |
+| --- | --- | --- | --- |
+| England | `--team-a` | `#b8616c` | muted brick-rose, hue 352° |
+| "behind" signal | `--down` | `#f85149` | vivid orange-red, hue 3° |
+| Italy | `--team-b` | `#50956d` | muted sage, hue 145° |
+| "ahead" signal | `--up` | `#3fb950` | vivid green, hue 128° |
+
+Team colours only ever appear as edge rules and low-alpha washes; the signal
+colours only ever appear as solid filled chips. Keep that split if you add
+anything — it is what stops a red England column reading as a losing table.
+
+Flags are inline SVG in `src/components/Flag.tsx`; adding a nation means adding a
+case there and a member to `CountryCode`.
 
 ## Shape of the code
 
@@ -47,17 +69,18 @@ is the join key, null while running on seed data.
 
 ## Known gaps in this prototype
 
-- **The 16 coach names are invented, not real NAF coaches.** The brief asked for 16
-  taken off the NAF website. The cloud environment this was built in runs a
-  "Trusted" egress allowlist, so `thenaf.net` and `tourplay.net` are both refused
-  at the proxy and no real records could be read. The handles are written in NAF
-  style so the layout is judged at realistic name lengths, and `nafNumber` is left
-  null rather than filled with a made-up number. Replacing them means editing
-  `src/data/round.ts` and nothing else.
+- **Board 8 has no England coach.** Seven were named, and the eighth seat is marked
+  `vacant` in the fixture rather than filled with an invented name. It renders
+  greyed and hatched with no flag, and its match state is held at kick-off, since
+  an unfilled seat cannot be a game in progress. Naming the coach means setting
+  `nafName`, `race` and dropping `vacant` on board 8's `a` side.
+- **`nafNumber` is null for every coach.** No NAF numbers were available; they are
+  left null rather than filled with made-up values.
+- **Italy's races are placeholders.** The eight coach names are as given; their
+  races are the randomly drawn set the prototype started with. England's races are
+  as specified.
 - **No persistence and no backend.** State resets on reload; `Reset round` restores
   the seed.
-- **Races are fixed in the fixture.** Eight distinct per team, drawn at random once,
-  with overlap between teams allowed — three races appear on both sides.
 
 ### Reaching NAF and Tourplay from a cloud session
 

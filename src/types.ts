@@ -26,6 +26,15 @@ export const OUTLOOK_MAX: Outlook = 1
 /** Which of the two teams a side belongs to. */
 export type TeamId = 'A' | 'B'
 
+/** Nations currently fielded. Adding one means adding its flag to `Flag.tsx`. */
+export type CountryCode = 'england' | 'italy'
+
+/** A national team in this fixture. */
+export interface Team {
+  name: string
+  country: CountryCode
+}
+
 /** One coach's side of a single board. */
 export interface Side {
   /** NAF name as registered — the handle shown on the dashboard. */
@@ -38,6 +47,11 @@ export interface Side {
   score: number
   /** Casualties suffered by this side. Fed by Tourplay. */
   injuries: number
+  /**
+   * True when the seat is not yet filled. A vacant side renders greyed with no
+   * flag and no race, rather than showing a placeholder coach as if real.
+   */
+  vacant?: boolean
 }
 
 /** One live board in the round: two coaches, a score, a half, an outlook. */
@@ -61,8 +75,8 @@ export interface Round {
   roundNumber: number
   /** Total rounds in the event, for the "Round 3 of 6" caption. */
   totalRounds: number
-  teamAName: string
-  teamBName: string
+  teamA: Team
+  teamB: Team
   boards: Board[]
 }
 

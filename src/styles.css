@@ -14,10 +14,12 @@
   --ink-dim: #96a3b5;
   --ink-faint: #667488;
 
-  --team-a: #f0b429;
-  --team-a-soft: rgba(240, 180, 41, 0.13);
-  --team-b: #38bdf8;
-  --team-b-soft: rgba(56, 189, 248, 0.13);
+  /* England: muted brick-rose, hue 352° — well off the vivid orange-red of --down. */
+  --team-a: #b8616c;
+  --team-a-soft: rgba(184, 97, 108, 0.12);
+  /* Italy: muted sage, hue 145° — well off the vivid green of --up. */
+  --team-b: #50956d;
+  --team-b-soft: rgba(80, 149, 109, 0.12);
 
   --up: #3fb950;
   --up-soft: rgba(63, 185, 80, 0.15);
@@ -163,12 +165,9 @@ h1 {
   gap: 7px;
 }
 
-.legend__team::before {
-  content: '';
-  width: 9px;
-  height: 9px;
-  border-radius: 2px;
-  background: currentColor;
+.legend__team .flag {
+  width: 18px;
+  height: 12px;
 }
 
 .legend__team--a {
@@ -274,16 +273,62 @@ h1 {
 }
 
 .side__name {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  min-width: 0;
   font-size: clamp(0.68rem, 1vw, 0.95rem);
   font-weight: 650;
   letter-spacing: -0.01em;
   line-height: 1.2;
+}
+
+.side__handle {
+  min-width: 0;
   overflow-wrap: anywhere;
   /* Two lines maximum, so a long handle never shoves the score off screen. */
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+/* ---------- flags ---------- */
+
+.flag {
+  flex: none;
+  width: 15px;
+  height: 10px;
+  border-radius: 1.5px;
+  /* Hairline so the white fields keep an edge against the dark ground. */
+  box-shadow: 0 0 0 1px rgba(231, 237, 245, 0.22);
+  align-self: center;
+}
+
+/* ---------- an unfilled seat ---------- */
+
+.side--vacant {
+  background: repeating-linear-gradient(
+    135deg,
+    rgba(150, 163, 181, 0.05) 0 6px,
+    transparent 6px 12px
+  );
+  border-left-style: dashed;
+  border-left-color: var(--ink-faint);
+}
+
+.side--vacant .side__handle {
+  color: var(--ink-faint);
+  font-weight: 600;
+  font-style: italic;
+}
+
+.side__race--vacant {
+  font-size: clamp(0.6rem, 0.8vw, 0.8rem);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--ink-faint);
+  font-style: italic;
 }
 
 .side__race {
@@ -734,7 +779,7 @@ h1 {
 
 .ctl-name {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 7px;
   min-width: 0;
   padding-left: 8px;
@@ -747,6 +792,22 @@ h1 {
 
 .ctl-name--b {
   border-left-color: var(--team-b);
+}
+
+.ctl-name--vacant {
+  border-left-style: dashed;
+  border-left-color: var(--ink-faint);
+}
+
+.ctl-name--vacant .ctl-name__handle {
+  color: var(--ink-faint);
+  font-style: italic;
+}
+
+.ctl-name--vacant .ctl-name__race {
+  font-style: italic;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .ctl-name__handle {
