@@ -1,4 +1,14 @@
-import { OUTLOOK_VALUES, type Board, type Half, type Outlook, type Round } from './types'
+import {
+  OUTLOOK_VALUES,
+  PERIODS,
+  outlookForResult,
+  resultOf,
+  type Board,
+  type Kickoff,
+  type Outlook,
+  type Period,
+  type Round,
+} from './types'
 
 /** The mutable half of a board — the only fields a save is allowed to write. */
 export interface SaveBoard {
@@ -7,7 +17,8 @@ export interface SaveBoard {
   aInjuries: number
   bScore: number
   bInjuries: number
-  half: Half
+  period: Period
+  kickoff: Kickoff
   outlook: Outlook
 }
 
@@ -18,8 +29,11 @@ export function toSaveBoard(board: Board): SaveBoard {
     aInjuries: board.a.injuries,
     bScore: board.b.score,
     bInjuries: board.b.injuries,
-    half: board.half,
-    outlook: board.outlook,
+    period: board.period,
+    kickoff: board.kickoff,
+    // A finished match is no longer a judgement call; send the result's value
+    // so the client and the server agree on what was saved.
+    outlook: board.period === 'FT' ? outlookForResult(resultOf(board)) : board.outlook,
   }
 }
 
@@ -28,8 +42,12 @@ export function toSaveBoard(board: Board): SaveBoard {
  * hand-edited database should degrade to a sane default rather than render
  * `NaN` across the dashboard mid-round.
  */
-function asHalf(value: unknown): Half {
-  return value === 2 ? 2 : 1
+function asPeriod(value: unknown): Period {
+  return PERIODS.includes(value as Period) ? (value as Period) : '1'
+}
+
+function asKickoff(value: unknown): Kickoff {
+  return value === 'K' || value === 'R' ? value : null
 }
 
 function asOutlook(value: unknown): Outlook {
@@ -58,7 +76,8 @@ function normalise(payload: any): Round {
       tourplayMatchId: b.tourplayMatchId ?? null,
       a: { ...b.a, score: asCount(b.a.score), injuries: asCount(b.a.injuries) },
       b: { ...b.b, score: asCount(b.b.score), injuries: asCount(b.b.injuries) },
-      half: asHalf(b.half),
+      period: asPeriod(b.period),
+      kickoff: asKickoff(b.kickoff),
       outlook: asOutlook(b.outlook),
     })),
   }

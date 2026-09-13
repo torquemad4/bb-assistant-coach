@@ -104,10 +104,32 @@ gives the round-level number: a plain sum of all eight match outlooks, so it run
 from −8.0 to +8.0. The per-board strip beside it lets you read that sum back to
 its parts.
 
-**Match Control** — one row per board. Score, casualties and half are stepped here
-(they stand in for the live feed, see below). The outlook stepper moves in 0.5
-increments and clamps to −1.0 … +1.0; the arrow disables at each end rather than
-silently no-opping. Positive outlook favours team A, negative favours team B.
+**Match Control** — one row per board: score, casualties, kick-off, period and
+outlook. The outlook stepper moves in 0.5 increments and clamps to −1.0 … +1.0;
+the arrow disables at each end rather than silently no-opping. Positive outlook
+favours team A, negative favours team B.
+
+**Kick-off** records whether the home side kicked (`K`) or received (`R`). It
+shows as a badge beside the home coach on the dashboard. Tapping the active side
+again clears it, since "not yet known" is a real state before kick-off.
+
+**Period** is first half, second half, or **FT**. It is one field rather than a
+half plus a separate finished flag, because the control on screen is one control
+and two fields would be two sources of truth for the same question.
+
+Calling **FT** settles the board:
+
+- its outlook is fixed to the result — **W → +1, D → 0, L → −1** — because a
+  finished match is a result, not a judgement
+- score, casualties, kick-off and outlook lock; only the period control stays
+  live, so full time can be undone
+- **Tourplay sync skips the board entirely.** Full time is the coordinator's
+  call and it stands; the feed must not keep pushing scores into a settled game
+- on the dashboard the card becomes the result: board number, an FT label, and a
+  flat green/grey/red panel with W, D or L
+
+The server derives the FT outlook from the submitted scores and ignores whatever
+the client sent, so two tablets cannot disagree about a finished game.
 
 ## Teams and colour
 

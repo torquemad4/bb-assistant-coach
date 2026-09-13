@@ -15,8 +15,11 @@ import {
   OUTLOOK_MAX,
   OUTLOOK_MIN,
   OUTLOOK_STEP,
+  outlookForResult,
+  resultOf,
   type Board,
-  type Half,
+  type Kickoff,
+  type Period,
   type Outlook,
   type Round,
   type TeamId,
@@ -49,7 +52,8 @@ function boardChanged(a: Board, b: Board): boolean {
     x.aInjuries !== y.aInjuries ||
     x.bScore !== y.bScore ||
     x.bInjuries !== y.bInjuries ||
-    x.half !== y.half ||
+    x.period !== y.period ||
+    x.kickoff !== y.kickoff ||
     x.outlook !== y.outlook
   )
 }
@@ -72,7 +76,8 @@ export interface RoundController {
   nudgeOutlook: (boardId: number, direction: 1 | -1) => void
   nudgeScore: (boardId: number, team: TeamId, direction: 1 | -1) => void
   nudgeInjuries: (boardId: number, team: TeamId, direction: 1 | -1) => void
-  setHalf: (boardId: number, half: Half) => void
+  setPeriod: (boardId: number, period: Period) => void
+  setKickoff: (boardId: number, kickoff: Kickoff) => void
   /** Throw away unsaved edits and go back to the last saved state. */
   discard: () => void
   save: () => void
@@ -239,9 +244,26 @@ export function useRound(): RoundController {
     [updateBoard],
   )
 
-  const setHalf = useCallback(
-    (boardId: number, half: Half) => {
-      updateBoard(boardId, (board) => ({ ...board, half }))
+  const setPeriod = useCallback(
+    (boardId: number, period: Period) => {
+      updateBoard(boardId, (board) => ({
+        ...board,
+        period,
+        // Calling full time settles the outlook: a finished match is a result,
+        // not a judgement. Leaving FT keeps the value so it can be adjusted.
+        outlook: period === 'FT' ? outlookForResult(resultOf(board)) : board.outlook,
+      }))
+    },
+    [updateBoard],
+  )
+
+  const setKickoff = useCallback(
+    (boardId: number, kickoff: Kickoff) => {
+      // Tapping the active side again clears it.
+      updateBoard(boardId, (board) => ({
+        ...board,
+        kickoff: board.kickoff === kickoff ? null : kickoff,
+      }))
     },
     [updateBoard],
   )
@@ -361,7 +383,8 @@ export function useRound(): RoundController {
     nudgeOutlook,
     nudgeScore,
     nudgeInjuries,
-    setHalf,
+    setPeriod,
+    setKickoff,
     discard,
     save: () => void save(),
     reload,

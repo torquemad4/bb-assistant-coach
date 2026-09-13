@@ -74,7 +74,8 @@ interface BoardRow {
   b_score: number
   b_injuries: number
   b_vacant: number
-  half: number
+  period: string
+  kickoff: string | null
   outlook: number
   tourplay_match_id: string | null
 }
@@ -110,7 +111,8 @@ function boardFromRow(row: BoardRow) {
       injuries: row.b_injuries,
       ...(row.b_vacant ? { vacant: true } : {}),
     },
-    half: row.half,
+    period: row.period,
+    kickoff: row.kickoff,
     outlook: row.outlook,
   }
 }
@@ -237,13 +239,16 @@ function count(value: unknown): number | null {
   return value
 }
 
+const PERIODS = ['1', '2', 'FT']
+
 interface ValidBoard {
   id: number
   aScore: number
   aInjuries: number
   bScore: number
   bInjuries: number
-  half: number
+  period: string
+  kickoff: string | null
   outlook: number
 }
 
@@ -276,12 +281,32 @@ function validate(payload: unknown): { boards: ValidBoard[] } | { error: string 
       return { error: `Board ${id}: score and casualties must be whole numbers 0-${MAX_COUNT}` }
     }
 
-    if (b.half !== 1 && b.half !== 2) return { error: `Board ${id}: half must be 1 or 2` }
+    if (typeof b.period !== 'string' || !PERIODS.includes(b.period)) {
+      return { error: `Board ${id}: period must be one of ${PERIODS.join(', ')}` }
+    }
+    const kickoff = b.kickoff == null ? null : b.kickoff
+    if (kickoff !== null && kickoff !== 'K' && kickoff !== 'R') {
+      return { error: `Board ${id}: kickoff must be K, R or null` }
+    }
     if (typeof b.outlook !== 'number' || !OUTLOOKS.includes(b.outlook)) {
       return { error: `Board ${id}: outlook must be one of ${OUTLOOKS.join(', ')}` }
     }
 
-    valid.push({ id, aScore, aInjuries, bScore, bInjuries, half: b.half, outlook: b.outlook })
+    // A finished match's outlook is the result, whatever the client sent. The
+    // server decides this so two tablets cannot disagree about a settled game.
+    const outlook =
+      b.period === 'FT' ? (aScore > bScore ? 1 : aScore < bScore ? -1 : 0) : b.outlook
+
+    valid.push({
+      id,
+      aScore,
+      aInjuries,
+      bScore,
+      bInjuries,
+      period: b.period,
+      kickoff,
+      outlook,
+    })
   }
 
   return { boards: valid }
@@ -300,24 +325,27 @@ function syncStatements(env: Env, matches: LiveMatch[], boards: BoardRow[]) {
 
   for (const board of boards) {
     if (!board.tourplay_match_id) continue
+    // Full time is the coordinator's call, and it stands. Tourplay must not
+    // keep pushing scores into a game that has been settled.
+    if (board.period === 'FT') continue
     const match = byMatchId.get(board.tourplay_match_id)
     if (!match) continue
 
     // A half Tourplay could not give us leaves the stored value alone rather
     // than resetting the board to the first half.
-    const half = match.half ?? board.half
+    const period = match.half ? String(match.half) : board.period
 
     statements.push(
       env.DB.prepare(
         `UPDATE board
-            SET a_score = ?, a_injuries = ?, b_score = ?, b_injuries = ?, half = ?
+            SET a_score = ?, a_injuries = ?, b_score = ?, b_injuries = ?, period = ?
           WHERE id = ?`,
       ).bind(
         match.local.score,
         match.local.injuries,
         match.visitor.score,
         match.visitor.injuries,
-        half,
+        period,
         board.id,
       ),
     )
@@ -567,9 +595,9 @@ export default {
         statements.push(
           env.DB.prepare(
             `INSERT INTO board (round_id, board_no, a_naf_name, a_race, a_score, a_injuries,
-                                b_naf_name, b_race, b_score, b_injuries, half, outlook,
+                                b_naf_name, b_race, b_score, b_injuries, period, outlook,
                                 tourplay_match_id)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0, ?)`,
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '1', 0, ?)`,
           ).bind(
             roundId,
             index + 1,
@@ -641,9 +669,20 @@ export default {
       const statements = result.boards.map((b) =>
         env.DB.prepare(
           `UPDATE board
-             SET a_score = ?, a_injuries = ?, b_score = ?, b_injuries = ?, half = ?, outlook = ?
+             SET a_score = ?, a_injuries = ?, b_score = ?, b_injuries = ?,
+                 period = ?, kickoff = ?, outlook = ?
            WHERE round_id = ? AND board_no = ?`,
-        ).bind(b.aScore, b.aInjuries, b.bScore, b.bInjuries, b.half, b.outlook, active.round.id, b.id),
+        ).bind(
+          b.aScore,
+          b.aInjuries,
+          b.bScore,
+          b.bInjuries,
+          b.period,
+          b.kickoff,
+          b.outlook,
+          active.round.id,
+          b.id,
+        ),
       )
       statements.push(
         env.DB.prepare("UPDATE round SET updated_at = datetime('now') WHERE id = ?").bind(

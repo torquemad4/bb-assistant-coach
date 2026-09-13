@@ -719,7 +719,7 @@ h1 {
 .ctl-head,
 .ctl-row {
   display: grid;
-  grid-template-columns: 38px minmax(140px, 1fr) 214px 214px 108px 126px;
+  grid-template-columns: 34px minmax(118px, 1fr) 196px 196px 74px 132px 116px;
   gap: clamp(6px, 0.8vw, 12px);
   align-items: center;
 }
@@ -1475,4 +1475,70 @@ h1 {
   margin: 0;
   max-width: 44ch;
   line-height: 1.5;
+}
+
+/* ---------- kick-off, period and full time ---------- */
+
+.halves--kick .halves__btn {
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.halves--period .halves__btn {
+  font-size: 0.74rem;
+  padding: 0 2px;
+}
+
+/* Full time is a different kind of act from picking a half, so it reads
+   differently even before it is chosen. */
+.halves__btn--ft.is-active {
+  background: var(--level);
+  color: var(--bg);
+}
+
+.kick-badge {
+  flex: none;
+  align-self: center;
+  min-width: 17px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: var(--line);
+  color: var(--ink-dim);
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-align: center;
+}
+
+.pill--ft {
+  background: var(--level-soft);
+  color: var(--ink);
+  font-weight: 800;
+}
+
+/* A finished board is only its result. */
+.board--ft .ft {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  font-size: clamp(3rem, min(6vw, 18vh), 8rem);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.ft--w {
+  background: var(--up);
+  color: #06230c;
+}
+
+.ft--d {
+  background: var(--level);
+  color: #14171c;
+}
+
+.ft--l {
+  background: var(--down);
+  color: #2b0705;
 }

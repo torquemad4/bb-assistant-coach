@@ -1,7 +1,7 @@
 import { RACE_TAG, type Race } from '../data/races'
 import { signed, toneOf } from '../format'
 import { Flag } from './Flag'
-import type { Board, CountryCode, Side } from '../types'
+import { resultOf, type Board, type CountryCode, type Side } from '../types'
 
 function raceTag(race: string): string {
   return RACE_TAG[race as Race] ?? race.slice(0, 4).toUpperCase()
@@ -11,14 +11,21 @@ interface SideRowProps {
   side: Side
   team: 'a' | 'b'
   country: CountryCode | null
+  /** Shown against the home side only: did they kick or receive. */
+  kickoff?: 'K' | 'R' | null
 }
 
-function SideRow({ side, team, country }: SideRowProps) {
+function SideRow({ side, team, country, kickoff }: SideRowProps) {
   return (
     <div className={`side side--${team}${side.vacant ? ' side--vacant' : ''}`}>
       <div className="side__name" title={side.nafName}>
         {!side.vacant && <Flag country={country} />}
         <span className="side__handle">{side.nafName}</span>
+        {kickoff && (
+          <span className="kick-badge" title={kickoff === 'K' ? 'Kicked off' : 'Received'}>
+            {kickoff}
+          </span>
+        )}
       </div>
       {side.vacant ? (
         <div className="side__race side__race--vacant">Seat unfilled</div>
@@ -42,16 +49,33 @@ interface BoardCardProps {
 export function BoardCard({ board, countryA, countryB }: BoardCardProps) {
   const tone = toneOf(board.outlook)
 
+  // A finished match has nothing left to read but its result, so the card
+  // becomes the result.
+  if (board.period === 'FT') {
+    const result = resultOf(board)
+    return (
+      <article className="board board--ft" aria-label={`Board ${board.id}, full time`}>
+        <header className="board__head">
+          <span className="board__number">Board {board.id}</span>
+          <span className="pill pill--ft">FT</span>
+        </header>
+        <div className={`ft ft--${result.toLowerCase()}`} aria-label={`Result ${result}`}>
+          {result}
+        </div>
+      </article>
+    )
+  }
+
   return (
     <article className="board" aria-label={`Board ${board.id}`}>
       <header className="board__head">
         <span className="board__number">Board {board.id}</span>
-        <span className={`pill pill--half pill--half-${board.half}`}>
-          {board.half === 1 ? '1st' : '2nd'} Half
+        <span className={`pill pill--half pill--half-${board.period}`}>
+          {board.period === '1' ? '1st' : '2nd'} Half
         </span>
       </header>
 
-      <SideRow side={board.a} team="a" country={countryA} />
+      <SideRow side={board.a} team="a" country={countryA} kickoff={board.kickoff} />
 
       <div className="board__score" aria-label="Score">
         <span className="board__score-value">{board.a.score}</span>

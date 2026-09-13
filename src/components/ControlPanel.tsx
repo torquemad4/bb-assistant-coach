@@ -4,7 +4,14 @@ import { Flag } from './Flag'
 import { Stepper } from './Stepper'
 import { TourplayPanel } from './TourplayPanel'
 import type { RoundController } from '../state/useRound'
-import { OUTLOOK_MAX, OUTLOOK_MIN, type Board, type CountryCode } from '../types'
+import {
+  OUTLOOK_MAX,
+  OUTLOOK_MIN,
+  PERIODS,
+  type Board,
+  type CountryCode,
+  type Period,
+} from '../types'
 
 function raceTag(race: string): string {
   return RACE_TAG[race as Race] ?? race.slice(0, 4).toUpperCase()
@@ -18,11 +25,16 @@ interface RowProps {
 }
 
 function ControlRow({ board, controller, countryA, countryB }: RowProps) {
-  const { nudgeOutlook, nudgeScore, nudgeInjuries, setHalf, connection, dirtyBoardIds } = controller
+  const { nudgeOutlook, nudgeScore, nudgeInjuries, setPeriod, setKickoff, connection, dirtyBoardIds } =
+    controller
   const locked = connection !== 'live'
   // Score, casualties and half come from Tourplay while the round follows it —
   // editing them by hand would just be overwritten on the next sync.
-  const stateLocked = locked || controller.followingTourplay
+  const followed = locked || controller.followingTourplay
+  // A finished match is settled: nothing about it is editable except undoing
+  // full time itself.
+  const ft = board.period === 'FT'
+  const stateLocked = followed || ft
   const dirty = dirtyBoardIds.includes(board.id)
 
   return (
@@ -88,17 +100,39 @@ function ControlRow({ board, controller, countryA, countryB }: RowProps) {
       </div>
 
       <div className="ctl-row__cell">
-        <div className="halves" role="group" aria-label={`Board ${board.id} half`}>
-          {([1, 2] as const).map((half) => (
+        <div className="halves halves--kick" role="group" aria-label={`Board ${board.id} kick-off`}>
+          {(['K', 'R'] as const).map((side) => (
             <button
-              key={half}
+              key={side}
               type="button"
-              className={`halves__btn${board.half === half ? ' is-active' : ''}`}
-              onClick={() => setHalf(board.id, half)}
-              disabled={stateLocked}
-              aria-pressed={board.half === half}
+              className={`halves__btn${board.kickoff === side ? ' is-active' : ''}`}
+              onClick={() => setKickoff(board.id, side)}
+              disabled={locked || ft}
+              aria-pressed={board.kickoff === side}
+              title={side === 'K' ? 'Home side kicked off' : 'Home side received'}
             >
-              {half === 1 ? '1st' : '2nd'}
+              {side}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="ctl-row__cell">
+        <div className="halves halves--period" role="group" aria-label={`Board ${board.id} period`}>
+          {PERIODS.map((period: Period) => (
+            <button
+              key={period}
+              type="button"
+              className={`halves__btn${board.period === period ? ' is-active' : ''}${
+                period === 'FT' ? ' halves__btn--ft' : ''
+              }`}
+              onClick={() => setPeriod(board.id, period)}
+              // Tourplay owns which half it is, but calling full time is always
+              // the coordinator's to do — and undo.
+              disabled={period === 'FT' ? locked : followed}
+              aria-pressed={board.period === period}
+            >
+              {period === '1' ? '1st' : period === '2' ? '2nd' : 'FT'}
             </button>
           ))}
         </div>
@@ -107,7 +141,7 @@ function ControlRow({ board, controller, countryA, countryB }: RowProps) {
       <div className="ctl-row__cell ctl-row__cell--outlook">
         <Stepper
           arrows
-          disabled={locked}
+          disabled={locked || ft}
           label={`board ${board.id} outlook`}
           display={signed(board.outlook)}
           tone={toneOf(board.outlook)}
@@ -141,8 +175,9 @@ export function ControlPanel(controller: RoundController) {
           Outlook steps by 0.5, clamped to −1.0 … +1.0 — positive favours {round.teamA.name},
           negative favours {round.teamB.name}.{' '}
           {controller.followingTourplay
-            ? 'Score, casualties and half come from Tourplay; outlook is always yours.'
-            : 'Nothing is written until you save.'}
+            ? 'Score, casualties and half come from Tourplay; kick-off, full time and outlook are yours.'
+            : 'Nothing is written until you save.'}{' '}
+          Calling FT fixes that board's outlook to the result and locks it.
         </p>
         <div className="control__total">
           <span className="control__total-label">Aggregate</span>
@@ -192,7 +227,8 @@ export function ControlPanel(controller: RoundController) {
         <span>
           Casualties {round.teamA.name} / {round.teamB.name}
         </span>
-        <span>Half</span>
+        <span>Kick</span>
+        <span>Period</span>
         <span>Outlook</span>
       </div>
 

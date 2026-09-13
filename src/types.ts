@@ -7,8 +7,22 @@
  * below for the exact split between fed and locally-owned state.
  */
 
-/** Which half the board is currently playing. */
-export type Half = 1 | 2
+/**
+ * Where a board is up to: first half, second half, or finished.
+ *
+ * One field rather than a half plus a separate "finished" flag — the control on
+ * screen is one control, and two fields would be two sources of truth for the
+ * same question.
+ */
+export type Period = '1' | '2' | 'FT'
+
+export const PERIODS: readonly Period[] = ['1', '2', 'FT']
+
+/** What the home side did at kick-off. Null until someone says. */
+export type Kickoff = 'K' | 'R' | null
+
+/** A finished match, from the home side's point of view. */
+export type Result = 'W' | 'D' | 'L'
 
 /**
  * A coach's read on how a match is trending, stepped in 0.5 increments and
@@ -64,8 +78,10 @@ export interface Board {
   a: Side
   /** The team B coach on this board. */
   b: Side
-  /** Current half. Fed by Tourplay. */
-  half: Half
+  /** First half, second half, or finished. Fed by Tourplay while playing. */
+  period: Period
+  /** Whether the home side kicked or received. */
+  kickoff: Kickoff
   /** Assistant coach's read on the match. Always locally owned, never fed. */
   outlook: Outlook
 }
@@ -116,8 +132,23 @@ export interface Round {
 export const MAX_BOARDS = 8
 
 /**
- * Fields a live Tourplay feed is expected to own once wired up. Everything else
- * — notably `outlook` — stays local to this app.
+ * Fields the live Tourplay feed owns while a match is playing. Everything else
+ * — notably `outlook` and `kickoff` — is the coordinator's.
  */
-export const FEED_FIELDS = ['score', 'injuries', 'half'] as const
+export const FEED_FIELDS = ['score', 'injuries', 'period'] as const
 export type FeedField = (typeof FEED_FIELDS)[number]
+
+/** The result of a board, from the home side's point of view. */
+export function resultOf(board: Pick<Board, 'a' | 'b'>): Result {
+  if (board.a.score > board.b.score) return 'W'
+  if (board.a.score < board.b.score) return 'L'
+  return 'D'
+}
+
+/**
+ * A finished match is no longer a judgement call, so its outlook is pinned to
+ * the result rather than left to the coach.
+ */
+export function outlookForResult(result: Result): Outlook {
+  return result === 'W' ? 1 : result === 'L' ? -1 : 0
+}
