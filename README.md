@@ -182,6 +182,41 @@ npm run build
 npx wrangler dev --local    # serves dist/ and the API against a local D1
 ```
 
+## Pulling squads from Tourplay
+
+`scripts/fetch-tourplay.mjs` reads a tournament's squads and coaches from
+Tourplay's public API.
+
+```bash
+npm run tourplay -- eurobowl-xvii
+npm run tourplay -- https://tourplay.net/en/blood-bowl/eurobowl-xvii/players
+npm run tourplay -- eurobowl-xvii --json data/eurobowl-xvii.json
+```
+
+It prints a summary and, with `--json`, writes the full structure: tournament
+metadata plus every squad's coaches with NAF name, NAF number, country and coach
+rank.
+
+Things worth knowing about that API, since none of it is documented:
+
+- **Tourplay 403s a default user-agent.** `robots.txt` is empty, so there is no
+  scraping prohibition — it just expects browser headers, which the script sends.
+- **The page is an Angular SPA**; the HTML has no data in it. The endpoints were
+  read out of the JS bundle.
+- **`api/inscriptions/{slug}` requires a logged-in account** (401). The
+  per-category variant the script uses is public.
+- **Races are absent until rosters are submitted**, close to the event. Before
+  then `roster.teamName` is just the squad's name, not a Blood Bowl team.
+- A tournament's `coachesRegistered` count can exceed the coaches actually
+  listed; the difference appears to be unconfirmed registrations, which the
+  public endpoint does not expose. The script says so when the numbers disagree.
+- Node's built-in `fetch` ignores `HTTPS_PROXY`. Inside a Claude Code cloud
+  session, run it as `NODE_USE_ENV_PROXY=1 npm run tourplay -- <slug>`.
+
+The same API carries `phases/boards` and `clasifications` endpoints, which is the
+likely route for the live score feed — untested, because they need a tournament
+with fixtures already drawn.
+
 ## Shape of the code
 
 | Path | What lives there |
@@ -193,6 +228,7 @@ npx wrangler dev --local    # serves dist/ and the API against a local D1
 | `src/api.ts` | Typed client for the two API routes |
 | `worker/index.ts` | The API — validation and D1 access |
 | `migrations/` | Schema and seed |
+| `scripts/fetch-tourplay.mjs` | Pulls squads and coaches from Tourplay |
 | `src/components/` | Dashboard, BoardCard, RoundOutlook, ControlPanel, Stepper |
 
 Score, casualties and half are held separately from `outlook`, which is the seam
