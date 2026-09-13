@@ -50,13 +50,18 @@ second secret `CLOUDFLARE_ACCOUNT_ID` and pass it to the deploy step as
 
 ### Who can see the site
 
-The deployed site is **not public** — it sits behind Cloudflare Access, configured
-on the Worker itself (Workers & Pages → `bb-round-coordinator` → **Access**), so
-every route is covered rather than just the custom domain.
+The deployed site is **not public** — it sits behind Cloudflare Access as a
+self-hosted application on `coordinator.englandbb.co.uk`, managed at
+`one.dash.cloudflare.com` → **Access controls** → **Applications**.
 
-Access is an allowlist. Visitors sign in with a one-time PIN emailed to them; no
-Cloudflare account is needed. To add or remove someone, edit the policy's **Emails**
-include rule in that same Access tab.
+Protecting the hostname is sufficient here: `wrangler.jsonc` declares a route, so
+the Worker has exactly one trigger and no `workers.dev` hostname to leave exposed.
+If a `workers.dev` URL or a second route is ever added, protect the Worker itself
+instead, or that route bypasses this policy.
+
+Access is an allowlist, and an application with no policy denies every request.
+Visitors sign in with a one-time PIN emailed to them; no Cloudflare account is
+needed. To add or remove someone, edit the policy's **Emails** include rule.
 
 This is dashboard-managed, not in this repo. Moving it here — an allowlist file plus
 a CI step that reconciles the Access app — needs the deploy token extended with
