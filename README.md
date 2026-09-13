@@ -21,6 +21,35 @@ Deploys as a **static-asset Worker** (no server code — `dist/` is served direc
 Config is in `wrangler.jsonc`; the custom domain is declared there, so wrangler
 creates the DNS record itself on first deploy.
 
+### From CI (the normal path)
+
+`.github/workflows/deploy.yml` builds and deploys on every push to the working
+branch, and can be run by hand from the repo's **Actions** tab → *Deploy to
+Cloudflare* → **Run workflow**.
+
+It needs one repository secret, at **Settings → Secrets and variables → Actions →
+New repository secret**:
+
+| Secret | Value |
+| --- | --- |
+| `CLOUDFLARE_API_TOKEN` | A Cloudflare API token — see the permissions below |
+
+Create the token at **dash.cloudflare.com → My Profile → API Tokens → Create
+Token**, starting from the **Edit Cloudflare Workers** template. Then add one more
+permission row before saving:
+
+- **Zone → DNS → Edit**, scoped to `englandbb.co.uk`
+
+The template covers deploying the Worker itself, but attaching a custom domain
+writes a DNS record, and that needs DNS edit rights on the zone. Without it the
+build succeeds and the deploy fails at the custom-domain step.
+
+If the run fails with an error about more than one account being available, add a
+second secret `CLOUDFLARE_ACCOUNT_ID` and pass it to the deploy step as
+`accountId`.
+
+### From your own machine
+
 ```bash
 npm run cf-login   # once per machine — opens a browser to authorise wrangler
 npm run deploy     # builds, then wrangler deploy
@@ -36,11 +65,10 @@ Three things have to be true before that works:
 2. **`coordinator.englandbb.co.uk` must have no existing CNAME record.** Cloudflare
    refuses to create a custom domain over one. Delete it first if it exists —
    wrangler will add its own record.
-3. **You must run it from a machine with network access to `api.cloudflare.com`.**
-   It cannot be run from a Claude Code cloud session on the default *Trusted*
-   network policy — that allowlist refuses `api.cloudflare.com` at the egress
-   proxy. Add it under **Custom** (see the bottom of this README) to deploy from a
-   cloud session.
+3. **Deploying needs network access to `api.cloudflare.com`.** GitHub Actions has
+   it. A Claude Code cloud session on the default *Trusted* network policy does
+   not — that allowlist refuses the host at the egress proxy — so use CI, or add
+   the host under **Custom** (see the bottom of this README).
 
 To deploy without the custom domain — useful for a first smoke test — delete the
 `routes` block and run `npm run deploy`; the app lands on
