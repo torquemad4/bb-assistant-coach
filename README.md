@@ -182,6 +182,43 @@ npm run build
 npx wrangler dev --local    # serves dist/ and the API against a local D1
 ```
 
+## Following a live tournament
+
+A round can be linked to a Tourplay tournament, after which score, casualties and
+half are pulled from it instead of tapped in. **Outlook is never pulled** — it is
+the coach's read on the match and stays manual in every mode.
+
+On **Match Control**, the bar at the top shows the link. *Link a tournament* takes
+a Tourplay slug (the name in its URL), **previews the pairings it would import**,
+and only replaces the boards when you confirm. *Take over by hand* stops the sync
+and unlocks the steppers; *Follow Tourplay* resumes it.
+
+While following, the score, casualties and half steppers are **disabled** — editing
+them by hand would be overwritten within ten seconds, so the UI does not pretend
+otherwise.
+
+| Route | Does |
+| --- | --- |
+| `POST /api/link` | `{slug}` previews the import; `{slug, confirm: true}` performs it |
+| `POST /api/sync` | Pulls current match state |
+| `POST /api/sync-mode` | `{enabled}` follows Tourplay, or goes manual |
+
+Two things the import deliberately does:
+
+- **Replaces every board** — pairings, coaches, races and match ids — and resets
+  outlooks to zero. It previews first because of that.
+- **Clears the team names and flags** to Home/Away. An imported round is not the
+  previous fixture, and showing England and Italy flags over someone else's
+  tournament would be worse than showing none. Set them afterwards with a SQL
+  update if the event has two named squads.
+
+Every viewer polls, so `POST /api/sync` **throttles**: if Tourplay was read less
+than 8 seconds ago it returns the stored round untouched. Several tablets watching
+does not mean several trips to Tourplay.
+
+If Tourplay cannot be reached, the last known scores stay on screen and a message
+appears — the round is never blanked because a fetch failed.
+
 ## Pulling squads from Tourplay
 
 `scripts/fetch-tourplay.mjs` reads a tournament's squads and coaches from
@@ -213,9 +250,16 @@ Things worth knowing about that API, since none of it is documented:
 - Node's built-in `fetch` ignores `HTTPS_PROXY`. Inside a Claude Code cloud
   session, run it as `NODE_USE_ENV_PROXY=1 npm run tourplay -- <slug>`.
 
-The same API carries `phases/boards` and `clasifications` endpoints, which is the
-likely route for the live score feed — untested, because they need a tournament
-with fixtures already drawn.
+The live match state comes from two calls, both verified on 13 Sep 2026 against a
+tournament that was mid-round:
+
+- `api/tournament/{slug}/phase-status` → the phase id
+- `api/tournament/{slug}/phases?phaseId={id}` → every board's score, casualties,
+  both coaches, both races and `matchId`
+- `api/match/{matchId}` → `turn.half`, plus the turn number and whose turn it is
+
+Half is the only field needing a call per board, so a full refresh of 8 boards is
+9 requests.
 
 ## Shape of the code
 
@@ -227,6 +271,7 @@ with fixtures already drawn.
 | `src/state/useRound.ts` | Single source of truth; load, dirty tracking, save, polling |
 | `src/api.ts` | Typed client for the two API routes |
 | `worker/index.ts` | The API — validation and D1 access |
+| `worker/tourplay.ts` | Reads live match state from Tourplay |
 | `migrations/` | Schema and seed |
 | `scripts/fetch-tourplay.mjs` | Pulls squads and coaches from Tourplay |
 | `src/components/` | Dashboard, BoardCard, RoundOutlook, ControlPanel, Stepper |

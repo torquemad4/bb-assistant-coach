@@ -2,6 +2,7 @@ import { RACE_TAG, type Race } from '../data/races'
 import { signed, toneOf } from '../format'
 import { Flag } from './Flag'
 import { Stepper } from './Stepper'
+import { TourplayPanel } from './TourplayPanel'
 import type { RoundController } from '../state/useRound'
 import { OUTLOOK_MAX, OUTLOOK_MIN, type Board, type CountryCode } from '../types'
 
@@ -12,13 +13,16 @@ function raceTag(race: string): string {
 interface RowProps {
   board: Board
   controller: RoundController
-  countryA: CountryCode
-  countryB: CountryCode
+  countryA: CountryCode | null
+  countryB: CountryCode | null
 }
 
 function ControlRow({ board, controller, countryA, countryB }: RowProps) {
   const { nudgeOutlook, nudgeScore, nudgeInjuries, setHalf, connection, dirtyBoardIds } = controller
   const locked = connection !== 'live'
+  // Score, casualties and half come from Tourplay while the round follows it —
+  // editing them by hand would just be overwritten on the next sync.
+  const stateLocked = locked || controller.followingTourplay
   const dirty = dirtyBoardIds.includes(board.id)
 
   return (
@@ -48,7 +52,7 @@ function ControlRow({ board, controller, countryA, countryB }: RowProps) {
       <div className="ctl-row__cell ctl-row__cell--pair">
         <Stepper
           team="a"
-          disabled={locked}
+          disabled={stateLocked}
           label={`board ${board.id} team A score`}
           display={String(board.a.score)}
           atMin={board.a.score === 0}
@@ -56,7 +60,7 @@ function ControlRow({ board, controller, countryA, countryB }: RowProps) {
         />
         <Stepper
           team="b"
-          disabled={locked}
+          disabled={stateLocked}
           label={`board ${board.id} team B score`}
           display={String(board.b.score)}
           atMin={board.b.score === 0}
@@ -67,7 +71,7 @@ function ControlRow({ board, controller, countryA, countryB }: RowProps) {
       <div className="ctl-row__cell ctl-row__cell--pair">
         <Stepper
           team="a"
-          disabled={locked}
+          disabled={stateLocked}
           label={`board ${board.id} team A casualties`}
           display={String(board.a.injuries)}
           atMin={board.a.injuries === 0}
@@ -75,7 +79,7 @@ function ControlRow({ board, controller, countryA, countryB }: RowProps) {
         />
         <Stepper
           team="b"
-          disabled={locked}
+          disabled={stateLocked}
           label={`board ${board.id} team B casualties`}
           display={String(board.b.injuries)}
           atMin={board.b.injuries === 0}
@@ -91,7 +95,7 @@ function ControlRow({ board, controller, countryA, countryB }: RowProps) {
               type="button"
               className={`halves__btn${board.half === half ? ' is-active' : ''}`}
               onClick={() => setHalf(board.id, half)}
-              disabled={locked}
+              disabled={stateLocked}
               aria-pressed={board.half === half}
             >
               {half === 1 ? '1st' : '2nd'}
@@ -130,10 +134,15 @@ export function ControlPanel(controller: RoundController) {
 
   return (
     <div className="control">
+      <TourplayPanel {...controller} />
+
       <div className="control__bar">
         <p className="control__hint">
           Outlook steps by 0.5, clamped to −1.0 … +1.0 — positive favours {round.teamA.name},
-          negative favours {round.teamB.name}. Nothing is written until you save.
+          negative favours {round.teamB.name}.{' '}
+          {controller.followingTourplay
+            ? 'Score, casualties and half come from Tourplay; outlook is always yours.'
+            : 'Nothing is written until you save.'}
         </p>
         <div className="control__total">
           <span className="control__total-label">Aggregate</span>

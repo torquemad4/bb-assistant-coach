@@ -1194,3 +1194,198 @@ h1 {
   background: var(--pending);
   border: 2px solid var(--bg-raised);
 }
+
+/* ---------- Tourplay link ---------- */
+
+.tp {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.tp__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.tp__dot {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--ink-faint);
+}
+
+/* A live link is the one thing in this bar worth noticing from across a table. */
+.tp__dot.is-live {
+  background: var(--up);
+  box-shadow: 0 0 0 4px rgba(63, 185, 80, 0.16);
+}
+
+.tp__status {
+  flex: 1;
+  min-width: 200px;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.tp__meta {
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.tp__btn {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--bg-sunken);
+  font-size: 0.78rem;
+  font-weight: 650;
+  color: var(--ink-dim);
+}
+
+.tp__btn:hover:not(:disabled) {
+  color: var(--ink);
+  border-color: var(--ink-faint);
+}
+
+.tp__btn:disabled {
+  color: #3a424f;
+  cursor: default;
+}
+
+.tp__btn--primary:not(:disabled) {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--bg);
+}
+
+.tp__link,
+.tp__preview {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.tp__label {
+  font-size: 0.72rem;
+  color: var(--ink-dim);
+}
+
+.tp__link-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tp__input {
+  flex: 1;
+  min-width: 220px;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--bg-sunken);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.85rem;
+}
+
+.tp__input:focus-visible {
+  outline: 2px solid var(--team-b);
+  outline-offset: -2px;
+}
+
+.tp__error {
+  margin: 0;
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--down-soft);
+  border: 1px solid rgba(248, 81, 73, 0.35);
+  color: #ffb4b0;
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.tp__preview-head {
+  margin: 0;
+  font-size: 0.82rem;
+}
+
+.tp__preview-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.tp__preview-list li {
+  display: grid;
+  grid-template-columns: 26px 1fr 20px 1fr;
+  align-items: baseline;
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-sunken);
+  font-size: 0.78rem;
+}
+
+.tp__pv-no {
+  font-weight: 800;
+  color: var(--ink-faint);
+  text-align: center;
+}
+
+.tp__pv-side {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tp__pv-side em {
+  color: var(--ink-faint);
+  font-style: normal;
+  font-size: 0.72rem;
+}
+
+.tp__pv-v {
+  color: var(--ink-faint);
+  text-align: center;
+  font-size: 0.7rem;
+}
+
+.tp__warn {
+  margin: 0;
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--pending-soft);
+  border: 1px solid rgba(240, 180, 41, 0.35);
+  color: var(--pending);
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.tp__preview-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* The control rows shrink a little to make room for the link bar. */
+.control .ctl-row {
+  max-height: 78px;
+}

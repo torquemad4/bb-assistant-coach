@@ -42,10 +42,12 @@ function asCount(value: unknown): number {
 
 function normalise(payload: any): Round {
   return {
+    tourplay: payload.tourplay,
     roundNumber: payload.roundNumber,
     totalRounds: payload.totalRounds,
-    teamA: payload.teamA,
-    teamB: payload.teamB,
+    // The API sends '' for a team with no flag.
+    teamA: { ...payload.teamA, country: payload.teamA?.country || null },
+    teamB: { ...payload.teamB, country: payload.teamB?.country || null },
     updatedAt: payload.updatedAt,
     boards: (payload.boards ?? []).map((b: any): Board => ({
       id: b.id,
@@ -83,4 +85,45 @@ export async function saveRound(boards: Board[]): Promise<Round> {
   })
   if (!response.ok) throw new Error(await errorFrom(response))
   return normalise(await response.json())
+}
+
+/** One board as Tourplay would set it up, for the link preview. */
+export interface LinkPreviewBoard {
+  board: number
+  a: { coach: string; race: string }
+  b: { coach: string; race: string }
+}
+
+export interface LinkPreview {
+  preview: true
+  slug: string
+  tournament: { name: string; country: string | null; initDate: string | null }
+  currentRound: number
+  truncated: number
+  boards: LinkPreviewBoard[]
+}
+
+async function post(path: string, body?: unknown): Promise<any> {
+  const response = await fetch(path, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', accept: 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  })
+  if (!response.ok) throw new Error(await errorFrom(response))
+  return response.json()
+}
+
+/** Pulls live match state. The server ignores calls that come too close together. */
+export async function syncNow(): Promise<Round> {
+  return normalise(await post('/api/sync'))
+}
+
+/** Without `confirm`, returns what the import would do rather than doing it. */
+export async function linkTournament(slug: string, confirm = false): Promise<Round | LinkPreview> {
+  const payload = await post('/api/link', { slug, confirm })
+  return payload.preview ? (payload as LinkPreview) : normalise(payload)
+}
+
+export async function setSyncMode(enabled: boolean): Promise<Round> {
+  return normalise(await post('/api/sync-mode', { enabled }))
 }

@@ -10,7 +10,7 @@ function raceTag(race: string): string {
 interface SideRowProps {
   side: Side
   team: 'a' | 'b'
-  country: CountryCode
+  country: CountryCode | null
 }
 
 function SideRow({ side, team, country }: SideRowProps) {
@@ -34,8 +34,8 @@ function SideRow({ side, team, country }: SideRowProps) {
 
 interface BoardCardProps {
   board: Board
-  countryA: CountryCode
-  countryB: CountryCode
+  countryA: CountryCode | null
+  countryB: CountryCode | null
 }
 
 /** One vertical board column: coach A on top, score in the middle, coach B below. */

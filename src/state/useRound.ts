@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { fetchRound, saveRound, toSaveBoard } from '../api'
+import { fetchRound, linkTournament, saveRound, setSyncMode, syncNow, toSaveBoard, type LinkPreview } from '../api'
 import { SEED_ROUND } from '../data/round'
 import {
   OUTLOOK_MAX,
@@ -67,6 +67,21 @@ export interface RoundController {
   discard: () => void
   save: () => void
   reload: () => void
+
+  /** True while match state is being pulled from Tourplay. */
+  syncing: boolean
+  syncError: string | null
+  /** Match state comes from Tourplay and is not edited by hand. */
+  followingTourplay: boolean
+  syncNow: () => void
+  setFollowing: (enabled: boolean) => void
+  /** Link flow: preview first, then confirm. */
+  linkPreview: LinkPreview | null
+  linkError: string | null
+  linking: boolean
+  previewLink: (slug: string) => void
+  confirmLink: () => void
+  cancelLink: () => void
 }
 
 /**
@@ -84,6 +99,11 @@ export function useRound(): RoundController {
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null)
+  const [syncing, setSyncing] = useState(false)
+  const [syncError, setSyncError] = useState<string | null>(null)
+  const [linkPreview, setLinkPreview] = useState<LinkPreview | null>(null)
+  const [linkError, setLinkError] = useState<string | null>(null)
+  const [linking, setLinking] = useState(false)
 
   const dirtyBoardIds = useMemo(() => {
     const byId = new Map(baseline.boards.map((b) => [b.id, b]))
@@ -95,10 +115,12 @@ export function useRound(): RoundController {
 
   const isDirty = dirtyBoardIds.length > 0
 
+  const followingTourplay = round.tourplay?.syncEnabled === true
+
   // Kept in a ref so the polling interval can read current values without
   // being torn down and rebuilt on every keystroke.
-  const guard = useRef({ isDirty, saving, connection })
-  guard.current = { isDirty, saving, connection }
+  const guard = useRef({ isDirty, saving, connection, followingTourplay })
+  guard.current = { isDirty, saving, connection, followingTourplay }
 
   const load = useCallback(async (signal?: AbortSignal) => {
     try {
@@ -125,16 +147,33 @@ export function useRound(): RoundController {
     return () => controller.abort()
   }, [load])
 
+  const applySync = useCallback(async () => {
+    setSyncing(true)
+    try {
+      const fresh = await syncNow()
+      setRound(fresh)
+      setBaseline(fresh)
+      setSyncError(null)
+    } catch (cause) {
+      setSyncError(cause instanceof Error ? cause.message : String(cause))
+    } finally {
+      setSyncing(false)
+    }
+  }, [])
+
   // Watchers need the live picture. Polling pauses while there are unsaved
-  // edits, so a refresh can never wipe work in progress.
+  // edits, so a refresh can never wipe work in progress. When the round follows
+  // Tourplay the same tick pulls from it — the server throttles, so several
+  // viewers polling does not mean several trips to Tourplay.
   useEffect(() => {
     const timer = setInterval(() => {
-      const { isDirty: dirty, saving: busy, connection: state } = guard.current
+      const { isDirty: dirty, saving: busy, connection: state, followingTourplay: live } = guard.current
       if (dirty || busy || state !== 'live') return
-      void load()
+      if (live) void applySync()
+      else void load()
     }, POLL_MS)
     return () => clearInterval(timer)
-  }, [load])
+  }, [load, applySync])
 
   // A tablet that gets closed mid-edit should say so.
   useEffect(() => {
@@ -215,6 +254,48 @@ export function useRound(): RoundController {
     void load()
   }, [load])
 
+  const setFollowing = useCallback(async (enabled: boolean) => {
+    try {
+      const fresh = await setSyncMode(enabled)
+      setRound(fresh)
+      setBaseline(fresh)
+      setSyncError(null)
+    } catch (cause) {
+      setSyncError(cause instanceof Error ? cause.message : String(cause))
+    }
+  }, [])
+
+  const previewLink = useCallback(async (slug: string) => {
+    setLinking(true)
+    setLinkError(null)
+    try {
+      const result = await linkTournament(slug, false)
+      if ('preview' in result) setLinkPreview(result)
+    } catch (cause) {
+      setLinkError(cause instanceof Error ? cause.message : String(cause))
+    } finally {
+      setLinking(false)
+    }
+  }, [])
+
+  const confirmLink = useCallback(async () => {
+    if (!linkPreview) return
+    setLinking(true)
+    setLinkError(null)
+    try {
+      const result = await linkTournament(linkPreview.slug, true)
+      if (!('preview' in result)) {
+        setRound(result)
+        setBaseline(result)
+        setLinkPreview(null)
+      }
+    } catch (cause) {
+      setLinkError(cause instanceof Error ? cause.message : String(cause))
+    } finally {
+      setLinking(false)
+    }
+  }, [linkPreview])
+
   const aggregate = useMemo(
     () => round.boards.reduce((total, board) => total + board.outlook, 0),
     [round.boards],
@@ -238,5 +319,16 @@ export function useRound(): RoundController {
     discard,
     save: () => void save(),
     reload,
+    syncing,
+    syncError,
+    followingTourplay,
+    syncNow: () => void applySync(),
+    setFollowing: (enabled: boolean) => void setFollowing(enabled),
+    linkPreview,
+    linkError,
+    linking,
+    previewLink: (slug: string) => void previewLink(slug),
+    confirmLink: () => void confirmLink(),
+    cancelLink: () => setLinkPreview(null),
   }
 }

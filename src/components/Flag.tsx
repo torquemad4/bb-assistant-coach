@@ -10,7 +10,8 @@ const LABEL: Record<CountryCode, string> = {
  * ratio; a CSS hairline keeps the white fields from bleeding into the dark
  * board background.
  */
-export function Flag({ country }: { country: CountryCode }) {
+export function Flag({ country }: { country: CountryCode | null }) {
+  if (!country) return null
   return (
     <svg
       className="flag"

@@ -29,10 +29,10 @@ export type TeamId = 'A' | 'B'
 /** Nations currently fielded. Adding one means adding its flag to `Flag.tsx`. */
 export type CountryCode = 'england' | 'italy'
 
-/** A national team in this fixture. */
+/** A team in this fixture. `country` is null when no flag applies. */
 export interface Team {
   name: string
-  country: CountryCode
+  country: CountryCode | null
 }
 
 /** One coach's side of a single board. */
@@ -71,9 +71,19 @@ export interface Board {
 }
 
 /** A whole round: two teams, up to eight boards. */
+/** Link between a round and the Tourplay tournament it is being played at. */
+export interface TourplayLink {
+  slug: string | null
+  phaseId: number | null
+  /** When true, match state is pulled from Tourplay and not edited by hand. */
+  syncEnabled: boolean
+  lastSyncedAt: string | null
+}
+
 export interface Round {
   /** When the database last accepted a save. Absent when running on the fixture. */
   updatedAt?: string
+  tourplay?: TourplayLink
   roundNumber: number
   /** Total rounds in the event, for the "Round 3 of 6" caption. */
   totalRounds: number

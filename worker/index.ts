@@ -13,10 +13,21 @@
  * tablet that still has the old line-up on screen.
  */
 
+import { fetchLiveRound, fetchTournament, type LiveMatch } from './tourplay'
+
 export interface Env {
   DB: D1Database
   ASSETS: Fetcher
 }
+
+/**
+ * Every viewer polls, so a sync triggered by one of them serves the rest.
+ * Tourplay is only re-read when the stored data is older than this.
+ */
+const SYNC_MIN_INTERVAL_MS = 8_000
+
+/** The app renders at most this many boards. */
+const MAX_BOARDS = 8
 
 /** The only outlook values the scale allows. */
 const OUTLOOKS = [-1, -0.5, 0, 0.5, 1]
@@ -32,6 +43,10 @@ interface RoundRow {
   team_b_name: string
   team_b_country: string
   updated_at: string
+  tourplay_slug: string | null
+  tourplay_phase_id: number | null
+  sync_enabled: number
+  last_synced_at: string | null
 }
 
 interface BoardRow {
@@ -105,7 +120,59 @@ async function readRound(db: D1Database) {
     teamB: { name: round.team_b_name, country: round.team_b_country },
     boards: (boards.results as BoardRow[]).map(boardFromRow),
     updatedAt: round.updated_at,
+    tourplay: {
+      slug: round.tourplay_slug,
+      phaseId: round.tourplay_phase_id,
+      syncEnabled: round.sync_enabled === 1,
+      lastSyncedAt: round.last_synced_at,
+    },
   }
+}
+
+/** Reads just the sync bookkeeping, without pulling every board. */
+async function readSyncState(db: D1Database) {
+  const row = await db
+    .prepare('SELECT tourplay_slug, sync_enabled, last_synced_at FROM round WHERE id = 1')
+    .first<{ tourplay_slug: string | null; sync_enabled: number; last_synced_at: string | null }>()
+  return row
+}
+
+/**
+ * Writes live match state onto the boards. Matches are paired by Tourplay's
+ * match id where a board already carries one, and otherwise by board order —
+ * which is how a freshly imported round lines up.
+ */
+function syncStatements(env: Env, matches: LiveMatch[], boards: BoardRow[]) {
+  const byMatchId = new Map(boards.filter((b) => b.tourplay_match_id).map((b) => [b.tourplay_match_id, b]))
+  const statements: D1PreparedStatement[] = []
+
+  for (const match of matches) {
+    const board = byMatchId.get(String(match.matchId)) ?? boards.find((b) => b.board_no === match.order)
+    if (!board) continue
+
+    // A half Tourplay could not give us leaves the stored value alone rather
+    // than resetting the board to the first half.
+    const half = match.half ?? board.half
+
+    statements.push(
+      env.DB.prepare(
+        `UPDATE board
+            SET a_score = ?, a_injuries = ?, b_score = ?, b_injuries = ?, half = ?,
+                tourplay_match_id = ?
+          WHERE board_no = ?`,
+      ).bind(
+        match.local.score,
+        match.local.injuries,
+        match.visitor.score,
+        match.visitor.injuries,
+        half,
+        String(match.matchId),
+        board.board_no,
+      ),
+    )
+  }
+
+  return statements
 }
 
 /** A whole-number count within range, or null if the value is unusable. */
@@ -171,6 +238,149 @@ function validate(payload: unknown): { boards: ValidBoard[] } | { error: string 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url)
+
+    // ---- POST /api/sync : pull live match state from Tourplay ----
+    if (url.pathname === '/api/sync') {
+      if (request.method !== 'POST') return json({ error: `${request.method} not allowed` }, 405)
+
+      const state = await readSyncState(env.DB)
+      if (!state?.tourplay_slug) {
+        return json({ error: 'This round is not linked to a Tourplay tournament' }, 400)
+      }
+      if (state.sync_enabled !== 1) {
+        return json({ error: 'Sync is turned off for this round' }, 400)
+      }
+
+      // Every viewer polls; one of them doing the work is enough.
+      const last = state.last_synced_at ? Date.parse(state.last_synced_at + 'Z') : 0
+      if (Number.isFinite(last) && Date.now() - last < SYNC_MIN_INTERVAL_MS) {
+        return json({ ...(await readRound(env.DB)), synced: false, reason: 'too soon' })
+      }
+
+      let live
+      try {
+        live = await fetchLiveRound(state.tourplay_slug)
+      } catch (cause) {
+        return json({ error: cause instanceof Error ? cause.message : String(cause) }, 502)
+      }
+
+      const boards = await env.DB.prepare('SELECT * FROM board ORDER BY board_no').all<BoardRow>()
+      const statements = syncStatements(env, live.matches, boards.results as BoardRow[])
+      statements.push(
+        env.DB.prepare(
+          "UPDATE round SET last_synced_at = datetime('now'), tourplay_phase_id = ? WHERE id = 1",
+        ).bind(live.phaseId),
+      )
+      await env.DB.batch(statements)
+
+      return json({ ...(await readRound(env.DB)), synced: true, matched: statements.length - 1 })
+    }
+
+    // ---- POST /api/link : point the round at a Tourplay tournament ----
+    if (url.pathname === '/api/link') {
+      if (request.method !== 'POST') return json({ error: `${request.method} not allowed` }, 405)
+
+      let body: any
+      try {
+        body = await request.json()
+      } catch {
+        return json({ error: 'Body is not valid JSON' }, 400)
+      }
+
+      const slug = typeof body?.slug === 'string' ? body.slug.trim() : ''
+      if (!slug) return json({ error: 'slug is required' }, 400)
+
+      // Check the tournament exists before blaming the fixtures.
+      let info
+      try {
+        info = await fetchTournament(slug)
+      } catch (cause) {
+        return json({ error: cause instanceof Error ? cause.message : String(cause) }, 404)
+      }
+
+      let live
+      try {
+        live = await fetchLiveRound(slug, false)
+      } catch (cause) {
+        return json({ error: cause instanceof Error ? cause.message : String(cause) }, 502)
+      }
+
+      const matches = [...live.matches].sort((a, b) => a.order - b.order).slice(0, MAX_BOARDS)
+      if (matches.length === 0) return json({ error: 'That tournament has no matches drawn yet' }, 400)
+
+      // Replacing the boards throws away the current line-up, so it never
+      // happens without being asked for twice.
+      if (body?.confirm !== true) {
+        return json({
+          preview: true,
+          slug,
+          tournament: info,
+          phaseId: live.phaseId,
+          currentRound: live.currentRound,
+          truncated: live.matches.length > MAX_BOARDS ? live.matches.length - MAX_BOARDS : 0,
+          boards: matches.map((m) => ({
+            board: m.order,
+            a: { coach: m.local.coach, race: m.local.race },
+            b: { coach: m.visitor.coach, race: m.visitor.race },
+          })),
+        })
+      }
+
+      const statements: D1PreparedStatement[] = [env.DB.prepare('DELETE FROM board')]
+      matches.forEach((m, index) => {
+        statements.push(
+          env.DB.prepare(
+            `INSERT INTO board (board_no, a_naf_name, a_race, a_score, a_injuries,
+                                b_naf_name, b_race, b_score, b_injuries, half, outlook,
+                                tourplay_match_id)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0, ?)`,
+          ).bind(
+            index + 1,
+            m.local.coach || 'Unknown',
+            m.local.race || '',
+            m.local.score,
+            m.local.injuries,
+            m.visitor.coach || 'Unknown',
+            m.visitor.race || '',
+            m.visitor.score,
+            m.visitor.injuries,
+            String(m.matchId),
+          ),
+        )
+      })
+      statements.push(
+        env.DB.prepare(
+          `UPDATE round
+              SET tourplay_slug = ?, tourplay_phase_id = ?, sync_enabled = 1,
+                  last_synced_at = datetime('now'), updated_at = datetime('now'),
+                  round_number = ?,
+                  -- The imported boards are not the old fixture, so the old
+                  -- team names and flags must not survive the import.
+                  team_a_name = 'Home', team_a_country = '',
+                  team_b_name = 'Away', team_b_country = ''
+            WHERE id = 1`,
+        ).bind(slug, live.phaseId, live.currentRound || 1),
+      )
+      await env.DB.batch(statements)
+
+      return json({ ...(await readRound(env.DB)), linked: true, imported: matches.length })
+    }
+
+    // ---- POST /api/sync-mode : follow Tourplay, or go manual ----
+    if (url.pathname === '/api/sync-mode') {
+      if (request.method !== 'POST') return json({ error: `${request.method} not allowed` }, 405)
+      let body: any
+      try {
+        body = await request.json()
+      } catch {
+        return json({ error: 'Body is not valid JSON' }, 400)
+      }
+      if (typeof body?.enabled !== 'boolean') return json({ error: 'enabled must be a boolean' }, 400)
+      await env.DB.prepare('UPDATE round SET sync_enabled = ? WHERE id = 1')
+        .bind(body.enabled ? 1 : 0)
+        .run()
+      return json(await readRound(env.DB))
+    }
 
     if (url.pathname !== '/api/round') {
       return json({ error: 'Not found' }, 404)
