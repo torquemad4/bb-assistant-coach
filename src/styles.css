@@ -1,10 +1,112 @@
-/* ============================================================
-   Blood Bowl Round Coordinator — tablet dashboard
-   Built for landscape tablet first (≈1024–1400px wide), dark so
-   it reads under hall lighting, with finger-sized controls.
-   ============================================================ */
+/* ------------------------------------------------------------------
+   Theme tokens.
+
+   Light is the base palette on bare :root. Dark is redefined twice: once
+   behind prefers-color-scheme for viewers who have chosen nothing, guarded
+   so an explicit light choice still wins, and once behind [data-theme]
+   so the toggle wins in both directions.
+
+   Every colour below is a token. Nothing else in this file should name a
+   literal colour, or it will be right in one theme and wrong in the other.
+   ------------------------------------------------------------------ */
 
 :root {
+  color-scheme: light;
+
+  --bg: #f4f6f9;
+  --bg-raised: #ffffff;
+  --bg-sunken: #e9edf3;
+  --line: #d3d9e2;
+  --line-soft: #e4e8ee;
+  --ink: #161a20;
+  --ink-dim: #545d6b;
+  --ink-faint: #838d9c;
+  --ink-disabled: #b4bcc7;
+
+  /* Team colours, kept clear of the outlook pair on hue and saturation. */
+  --team-a: #a3444f;
+  --team-a-soft: rgba(163, 68, 79, 0.1);
+  --team-b: #3a7a5a;
+  --team-b-soft: rgba(58, 122, 90, 0.1);
+
+  /* Outlook / result. Saturated fills carry light text in this theme. */
+  --up: #1a7f37;
+  --up-soft: rgba(26, 127, 55, 0.13);
+  --on-up: #ffffff;
+  --down: #c22b2b;
+  --down-soft: rgba(194, 43, 43, 0.13);
+  --on-down: #ffffff;
+  --level: #6f7887;
+  --level-soft: rgba(111, 120, 135, 0.14);
+  --on-level: #ffffff;
+  --error-ink: #8d1f1f;
+
+  /* Unsaved work. Outside the team and outlook palettes on purpose. */
+  --pending: #a56100;
+  --pending-soft: rgba(165, 97, 0, 0.13);
+  --pending-ink: #ffffff;
+
+  --half-1-bg: rgba(2, 132, 199, 0.13);
+  --half-1-ink: #0369a1;
+  --half-2-bg: rgba(124, 58, 237, 0.13);
+  --half-2-ink: #6d28d9;
+
+  /* Keeps a flag's white field from vanishing into the page. */
+  --flag-edge: rgba(22, 26, 32, 0.25);
+
+  --radius: 10px;
+  --radius-sm: 7px;
+  --tap: 56px;
+}
+
+/* Dark, for viewers who have chosen nothing but whose system is dark. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+
+    --bg: #0d1117;
+    --bg-raised: #161b22;
+    --bg-sunken: #0a0e14;
+    --line: #262d38;
+    --line-soft: #1d232d;
+    --ink: #e7edf5;
+    --ink-dim: #96a3b5;
+    --ink-faint: #667488;
+    --ink-disabled: #3a424f;
+
+    --team-a: #b8616c;
+    --team-a-soft: rgba(184, 97, 108, 0.12);
+    --team-b: #50956d;
+    --team-b-soft: rgba(80, 149, 109, 0.12);
+
+    --up: #3fb950;
+    --up-soft: rgba(63, 185, 80, 0.15);
+    --on-up: #06230c;
+    --down: #f85149;
+    --down-soft: rgba(248, 81, 73, 0.15);
+    --on-down: #2b0705;
+    --level: #8b949e;
+    --level-soft: rgba(139, 148, 158, 0.12);
+    --on-level: #14171c;
+    --error-ink: #ffb4b0;
+
+    --pending: #f0b429;
+    --pending-soft: rgba(240, 180, 41, 0.15);
+    --pending-ink: #2a1d00;
+
+    --half-1-bg: rgba(56, 189, 248, 0.14);
+    --half-1-ink: #7dd3fc;
+    --half-2-bg: rgba(167, 139, 250, 0.16);
+    --half-2-ink: #c4b5fd;
+
+    --flag-edge: rgba(231, 237, 245, 0.22);
+  }
+}
+
+/* Dark, chosen explicitly. Same values, so the toggle wins on a light system. */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
   --bg: #0d1117;
   --bg-raised: #161b22;
   --bg-sunken: #0a0e14;
@@ -13,32 +115,34 @@
   --ink: #e7edf5;
   --ink-dim: #96a3b5;
   --ink-faint: #667488;
+  --ink-disabled: #3a424f;
 
-  /* England: muted brick-rose, hue 352° — well off the vivid orange-red of --down. */
   --team-a: #b8616c;
   --team-a-soft: rgba(184, 97, 108, 0.12);
-  /* Italy: muted sage, hue 145° — well off the vivid green of --up. */
   --team-b: #50956d;
   --team-b-soft: rgba(80, 149, 109, 0.12);
 
   --up: #3fb950;
   --up-soft: rgba(63, 185, 80, 0.15);
+  --on-up: #06230c;
   --down: #f85149;
   --down-soft: rgba(248, 81, 73, 0.15);
+  --on-down: #2b0705;
   --level: #8b949e;
   --level-soft: rgba(139, 148, 158, 0.12);
+  --on-level: #14171c;
+  --error-ink: #ffb4b0;
 
-  /* Unsaved work. Deliberately outside the team and outlook palettes so a
-     pending save never reads as a match result. */
   --pending: #f0b429;
   --pending-soft: rgba(240, 180, 41, 0.15);
   --pending-ink: #2a1d00;
 
-  --radius: 10px;
-  --radius-sm: 7px;
-  --tap: 56px;
+  --half-1-bg: rgba(56, 189, 248, 0.14);
+  --half-1-ink: #7dd3fc;
+  --half-2-bg: rgba(167, 139, 250, 0.16);
+  --half-2-ink: #c4b5fd;
 
-  color-scheme: dark;
+  --flag-edge: rgba(231, 237, 245, 0.22);
 }
 
 * {
@@ -247,13 +351,13 @@ h1 {
 }
 
 .pill--half-1 {
-  background: rgba(56, 189, 248, 0.14);
-  color: #7dd3fc;
+  background: var(--half-1-bg);
+  color: var(--half-1-ink);
 }
 
 .pill--half-2 {
-  background: rgba(167, 139, 250, 0.16);
-  color: #c4b5fd;
+  background: var(--half-2-bg);
+  color: var(--half-2-ink);
 }
 
 .side {
@@ -307,7 +411,7 @@ h1 {
   height: 10px;
   border-radius: 1.5px;
   /* Hairline so the white fields keep an edge against the dark ground. */
-  box-shadow: 0 0 0 1px rgba(231, 237, 245, 0.22);
+  box-shadow: 0 0 0 1px var(--flag-edge);
   align-self: center;
 }
 
@@ -316,7 +420,7 @@ h1 {
 .side--vacant {
   background: repeating-linear-gradient(
     135deg,
-    rgba(150, 163, 181, 0.05) 0 6px,
+    var(--level-soft) 0 6px,
     transparent 6px 12px
   );
   border-left-style: dashed;
@@ -551,7 +655,7 @@ h1 {
   background: linear-gradient(
     90deg,
     var(--down-soft) 0%,
-    rgba(139, 148, 158, 0.1) 50%,
+    var(--level-soft) 50%,
     var(--up-soft) 100%
   );
   border: 1px solid var(--line);
@@ -905,7 +1009,7 @@ h1 {
 }
 
 .stepper__btn:disabled {
-  color: #3a424f;
+  color: var(--ink-disabled);
   cursor: not-allowed;
 }
 
@@ -1094,7 +1198,7 @@ h1 {
   margin-top: clamp(10px, 1.4vw, 16px);
   padding: 10px 14px;
   background: var(--down-soft);
-  border: 1px solid rgba(248, 81, 73, 0.35);
+  border: 1px solid var(--down);
   border-radius: var(--radius);
   font-size: 0.8rem;
   line-height: 1.45;
@@ -1104,14 +1208,14 @@ h1 {
   flex: none;
   min-height: 40px;
   padding: 0 16px;
-  border: 1px solid rgba(248, 81, 73, 0.5);
+  border: 1px solid var(--down);
   border-radius: var(--radius-sm);
   font-size: 0.8rem;
   font-weight: 650;
 }
 
 .offline__retry:hover {
-  background: rgba(248, 81, 73, 0.12);
+  background: var(--down-soft);
 }
 
 .control__actions {
@@ -1142,7 +1246,8 @@ h1 {
 }
 
 .control__save.is-dirty:not(:disabled):hover {
-  background: #ffc846;
+  background: var(--pending);
+  filter: brightness(1.12);
 }
 
 .control__save:disabled {
@@ -1151,7 +1256,7 @@ h1 {
 }
 
 .control__reset:disabled {
-  color: #3a424f;
+  color: var(--ink-disabled);
   border-color: var(--line-soft);
   cursor: default;
 }
@@ -1167,8 +1272,8 @@ h1 {
 
 .control__error {
   background: var(--down-soft);
-  border: 1px solid rgba(248, 81, 73, 0.35);
-  color: #ffb4b0;
+  border: 1px solid var(--down);
+  color: var(--error-ink);
 }
 
 .control__saved {
@@ -1177,7 +1282,7 @@ h1 {
 }
 
 .ctl-row--dirty {
-  border-color: rgba(240, 180, 41, 0.45);
+  border-color: var(--pending);
 }
 
 .ctl-row__board {
@@ -1225,7 +1330,7 @@ h1 {
 /* A live link is the one thing in this bar worth noticing from across a table. */
 .tp__dot.is-live {
   background: var(--up);
-  box-shadow: 0 0 0 4px rgba(63, 185, 80, 0.16);
+  box-shadow: 0 0 0 4px var(--up-soft);
 }
 
 .tp__status {
@@ -1257,7 +1362,7 @@ h1 {
 }
 
 .tp__btn:disabled {
-  color: #3a424f;
+  color: var(--ink-disabled);
   cursor: default;
 }
 
@@ -1310,8 +1415,8 @@ h1 {
   padding: 7px 10px;
   border-radius: var(--radius-sm);
   background: var(--down-soft);
-  border: 1px solid rgba(248, 81, 73, 0.35);
-  color: #ffb4b0;
+  border: 1px solid var(--down);
+  color: var(--error-ink);
   font-size: 0.75rem;
   line-height: 1.45;
 }
@@ -1373,7 +1478,7 @@ h1 {
   padding: 7px 10px;
   border-radius: var(--radius-sm);
   background: var(--pending-soft);
-  border: 1px solid rgba(240, 180, 41, 0.35);
+  border: 1px solid var(--pending);
   color: var(--pending);
   font-size: 0.75rem;
   line-height: 1.45;
@@ -1448,7 +1553,7 @@ h1 {
   padding: 8px 10px;
   border-radius: var(--radius-sm);
   background: var(--pending-soft);
-  border: 1px solid rgba(240, 180, 41, 0.35);
+  border: 1px solid var(--pending);
   color: var(--pending);
   font-size: 0.76rem;
   line-height: 1.45;
@@ -1530,15 +1635,41 @@ h1 {
 
 .ft--w {
   background: var(--up);
-  color: #06230c;
+  color: var(--on-up);
 }
 
 .ft--d {
   background: var(--level);
-  color: #14171c;
+  color: var(--on-level);
 }
 
 .ft--l {
   background: var(--down);
-  color: #2b0705;
+  color: var(--on-down);
+}
+
+/* ---------- theme toggle ---------- */
+
+.theme {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--bg-sunken);
+  color: var(--ink-dim);
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+.theme:hover {
+  color: var(--ink);
+  border-color: var(--ink-faint);
+}
+
+.theme__glyph {
+  font-size: 0.95rem;
+  line-height: 1;
 }

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { ControlPanel } from './components/ControlPanel'
 import { Dashboard } from './components/Dashboard'
 import { Selectors } from './components/Selectors'
+import { ThemeToggle } from './components/ThemeToggle'
 import { useRound } from './state/useRound'
 
 type Tab = 'dashboard' | 'control'
@@ -36,6 +37,8 @@ export default function App() {
         </div>
 
         <Selectors {...controller} />
+
+        <ThemeToggle />
 
         <nav className="tabs" aria-label="Views">
           {TABS.map((entry) => (

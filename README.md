@@ -131,6 +131,28 @@ Calling **FT** settles the board:
 The server derives the FT outlook from the submitted scores and ignores whatever
 the client sent, so two tablets cannot disagree about a finished game.
 
+## Theming
+
+The app has a **light and a dark theme**, with a toggle in the top bar cycling
+Auto → Light → Dark. Auto follows the device. The choice is stored per device in
+`localStorage` — unlike the tournament selection, which is shared, the theme is a
+property of the screen you are looking at.
+
+`src/styles.css` defines the complete light palette on bare `:root`, then
+redefines only the tokens twice for dark: once under
+`@media (prefers-color-scheme: dark)` guarded as `:root:not([data-theme="light"])`
+so an explicit light choice beats a dark device, and once under
+`:root[data-theme="dark"]` so the toggle wins in the other direction too.
+
+**Every colour in this file is a token.** No rule below the token blocks names a
+literal colour. A colour defined only inside a media or `[data-theme]` block would
+be right in one theme and missing in the other, which is the classic way these
+break.
+
+Note the semantic fills need different text in each theme: the dark theme puts
+dark ink on bright green/red, the light theme puts white on darker green/red.
+That is what `--on-up`, `--on-down` and `--on-level` are for.
+
 ## Teams and colour
 
 The fixture is locked to **England v Italy**. England is team A (positive outlook
