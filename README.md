@@ -15,6 +15,33 @@ npm run build    # production build into dist/
 npm run typecheck
 ```
 
+## Deploying to coordinator.englandbb.co.uk
+
+Deploys as a **static-asset Worker** (no server code — `dist/` is served directly).
+Config is in `wrangler.jsonc`; the custom domain is declared there, so wrangler
+creates the DNS record itself on first deploy.
+
+```bash
+npm run cf-login   # once per machine — opens a browser to authorise wrangler
+npm run deploy     # builds, then wrangler deploy
+```
+
+Two things have to be true before that works:
+
+1. **The `englandbb.co.uk` zone must sit on the Cloudflare account you authorise.**
+   Wrangler can only attach a custom domain to a zone the account holds. If the
+   domain is on someone else's account, either move the zone, or drop the `routes`
+   block and have whoever runs DNS point a CNAME at the `workers.dev` hostname.
+2. **You must run it from a machine with network access to `api.cloudflare.com`.**
+   It cannot be run from a Claude Code cloud session on the default *Trusted*
+   network policy — that allowlist refuses `api.cloudflare.com` at the egress
+   proxy. Add it under **Custom** (see the bottom of this README) to deploy from a
+   cloud session.
+
+To deploy without the custom domain — useful for a first smoke test — delete the
+`routes` block and run `npm run deploy`; the app lands on
+`bb-round-coordinator.<your-subdomain>.workers.dev`.
+
 ## The two tabs
 
 **Dashboard** — one column per board, up to eight. Each column carries the England
@@ -69,11 +96,6 @@ is the join key, null while running on seed data.
 
 ## Known gaps in this prototype
 
-- **Board 8 has no England coach.** Seven were named, and the eighth seat is marked
-  `vacant` in the fixture rather than filled with an invented name. It renders
-  greyed and hatched with no flag, and its match state is held at kick-off, since
-  an unfilled seat cannot be a game in progress. Naming the coach means setting
-  `nafName`, `race` and dropping `vacant` on board 8's `a` side.
 - **`nafNumber` is null for every coach.** No NAF numbers were available; they are
   left null rather than filled with made-up values.
 - **Italy's races are placeholders.** The eight coach names are as given; their
@@ -94,7 +116,11 @@ thenaf.net
 *.thenaf.net
 tourplay.net
 *.tourplay.net
+api.cloudflare.com
 ```
+
+`api.cloudflare.com` is only needed if you want to run `npm run deploy` from a
+cloud session rather than your own machine.
 
 Tick *"Also include default list of common package managers"*, or npm and GitHub
 stop working. The change applies to sessions started afterwards — a running session

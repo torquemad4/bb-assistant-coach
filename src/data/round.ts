@@ -8,10 +8,7 @@ import type { Round } from '../types'
  * started with — eight distinct per team, with overlap between the teams
  * allowed. Necromantic Horror, Black Orc and Elven Union appear on both sides.
  *
- * Board 8 has no England coach yet. It is marked `vacant` rather than filled
- * with an invented name, so the gap is visible on the dashboard instead of
- * looking like a real entry, and its match state is held at kick-off — an
- * unfilled seat cannot be a game in progress.
+ * All eight seats are filled on both sides.
  *
  * Score, casualties and half are placeholder match states; a Tourplay feed will
  * own them later. `nafNumber` stays null until a real NAF lookup fills it in.
@@ -81,10 +78,10 @@ export const SEED_ROUND: Round = {
     {
       id: 8,
       tourplayMatchId: null,
-      a: { nafName: 'Coach TBC', nafNumber: null, race: '', score: 0, injuries: 0, vacant: true },
-      b: { nafName: 'PanicoBlack', nafNumber: null, race: 'Chaos Chosen', score: 0, injuries: 0 },
-      half: 1,
-      outlook: 0,
+      a: { nafName: 'Pipey', nafNumber: null, race: 'Lizardmen', score: 2, injuries: 2 },
+      b: { nafName: 'PanicoBlack', nafNumber: null, race: 'Chaos Chosen', score: 3, injuries: 1 },
+      half: 2,
+      outlook: -1,
     },
   ],
 }

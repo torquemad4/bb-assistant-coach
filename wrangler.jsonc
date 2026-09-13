@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "bb-round-coordinator",
+  "compatibility_date": "2026-09-13",
+  // Static-asset Worker: no server code, `dist/` is served directly.
+  "assets": {
+    "directory": "./dist",
+    // The app is one page with client-side tabs, so any path serves index.html.
+    "not_found_handling": "single-page-application"
+  },
+  // Wrangler creates the DNS record for this hostname on deploy, provided the
+  // englandbb.co.uk zone sits on the same Cloudflare account.
+  "routes": [
+    {
+      "pattern": "coordinator.englandbb.co.uk",
+      "custom_domain": true
+    }
+  ]
+}
