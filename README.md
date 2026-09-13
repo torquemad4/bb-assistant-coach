@@ -48,6 +48,22 @@ If the run fails with an error about more than one account being available, add 
 second secret `CLOUDFLARE_ACCOUNT_ID` and pass it to the deploy step as
 `accountId`.
 
+### Who can see the site
+
+The deployed site is **not public** — it sits behind Cloudflare Access, configured
+on the Worker itself (Workers & Pages → `bb-round-coordinator` → **Access**), so
+every route is covered rather than just the custom domain.
+
+Access is an allowlist. Visitors sign in with a one-time PIN emailed to them; no
+Cloudflare account is needed. To add or remove someone, edit the policy's **Emails**
+include rule in that same Access tab.
+
+This is dashboard-managed, not in this repo. Moving it here — an allowlist file plus
+a CI step that reconciles the Access app — needs the deploy token extended with
+**Access: Apps and Policies → Edit**.
+
+Deploys are unaffected: CI authenticates with the API token, not a browser session.
+
 ### From your own machine
 
 ```bash
