@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { ControlPanel } from './components/ControlPanel'
 import { Dashboard } from './components/Dashboard'
+import { Selectors } from './components/Selectors'
 import { useRound } from './state/useRound'
 
 type Tab = 'dashboard' | 'control'
@@ -33,6 +34,8 @@ export default function App() {
             {isDirty && <span className="topbar__dirty">unsaved changes</span>}
           </p>
         </div>
+
+        <Selectors {...controller} />
 
         <nav className="tabs" aria-label="Views">
           {TABS.map((entry) => (

@@ -14,6 +14,12 @@ import type { Round } from '../types'
  * own them later. `nafNumber` stays null until a real NAF lookup fills it in.
  */
 export const SEED_ROUND: Round = {
+  // The offline fallback is a single unnamed tournament; the selectors have
+  // nothing to switch between when the database cannot be reached.
+  tournaments: [{ id: 1, name: 'England v Italy', slug: null, syncEnabled: false }],
+  activeTournamentId: 1,
+  rounds: [{ id: 1, roundNumber: 3 }],
+  activeRoundId: 1,
   roundNumber: 3,
   totalRounds: 6,
   teamA: { name: 'England', country: 'england' },

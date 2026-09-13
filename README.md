@@ -131,6 +131,28 @@ anything — it is what stops a red England column reading as a losing table.
 Flags are inline SVG in `src/components/Flag.tsx`; adding a nation means adding a
 case there and a member to `CountryCode`.
 
+## Tournaments, rounds and boards
+
+A **tournament** holds **rounds**; a round holds **boards**. Which tournament and
+round are on screen is shared state in `app_state` — **not** a per-device setting.
+The coordinator switches with the selectors in the top bar and every watching
+tablet follows, which is the whole point of a shared dashboard.
+
+Consequences worth knowing:
+
+- **Importing a Tourplay round never destroys another tournament.** Link finds or
+  creates a tournament by its Tourplay slug, then adds or replaces only the round
+  matching Tourplay's current round number. Re-importing is safe.
+- **Every round is kept.** Round 1 is still there when round 4 is being played.
+- **Syncing matches boards by Tourplay match id only**, never by board order. That
+  is deliberate: order-matching would write round 2's scores onto round 1's boards.
+  If the round on screen is not the one Tourplay is playing, sync writes nothing
+  and the UI says which round is live.
+- Switching is blocked while there are unsaved edits, so a switch cannot silently
+  discard work.
+- A tournament created by hand named `A v B` takes A and B as its team names, and
+  gets flags if they are nations the app knows.
+
 ## Persistence
 
 The round lives in a Cloudflare **D1** database, `bb-coordinator`
@@ -174,6 +196,14 @@ worse than not saving.
 npm run db:migrate          # --remote, the live database
 npx wrangler d1 migrations apply bb-coordinator --local   # local dev copy
 ```
+
+Migrations 0001–0004 were applied to the **remote** database by hand through
+Cloudflare's API rather than by wrangler, because a Claude Code cloud session
+cannot reach `api.cloudflare.com`. The `d1_migrations` ledger has been
+back-filled to match, so `npm run db:migrate` behaves normally from 0005 onward.
+
+`backups/` holds a restorable snapshot taken immediately before 0004 rebuilt the
+tables.
 
 ### Local development
 

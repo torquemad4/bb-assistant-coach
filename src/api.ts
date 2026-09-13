@@ -42,6 +42,10 @@ function asCount(value: unknown): number {
 
 function normalise(payload: any): Round {
   return {
+    tournaments: payload.tournaments ?? [],
+    activeTournamentId: payload.activeTournamentId,
+    rounds: payload.rounds ?? [],
+    activeRoundId: payload.activeRoundId,
     tourplay: payload.tourplay,
     roundNumber: payload.roundNumber,
     totalRounds: payload.totalRounds,
@@ -100,6 +104,8 @@ export interface LinkPreview {
   tournament: { name: string; country: string | null; initDate: string | null }
   currentRound: number
   truncated: number
+  /** Plain English for what confirming would do to existing data. */
+  effect: string
   boards: LinkPreviewBoard[]
 }
 
@@ -113,9 +119,19 @@ async function post(path: string, body?: unknown): Promise<any> {
   return response.json()
 }
 
+export interface SyncResult {
+  round: Round
+  /** Set when Tourplay is playing a different round from the one on screen. */
+  liveRound: number | null
+}
+
 /** Pulls live match state. The server ignores calls that come too close together. */
-export async function syncNow(): Promise<Round> {
-  return normalise(await post('/api/sync'))
+export async function syncNow(): Promise<SyncResult> {
+  const payload = await post('/api/sync')
+  return {
+    round: normalise(payload),
+    liveRound: payload.reason === 'viewing an earlier round' ? payload.liveRound : null,
+  }
 }
 
 /** Without `confirm`, returns what the import would do rather than doing it. */
@@ -126,4 +142,14 @@ export async function linkTournament(slug: string, confirm = false): Promise<Rou
 
 export async function setSyncMode(enabled: boolean): Promise<Round> {
   return normalise(await post('/api/sync-mode', { enabled }))
+}
+
+/** Switches which tournament and round everyone is looking at. */
+export async function activate(tournamentId?: number, roundId?: number): Promise<Round> {
+  return normalise(await post('/api/activate', { tournamentId, roundId }))
+}
+
+/** Creates an empty tournament with a single round, and switches to it. */
+export async function createTournament(name: string): Promise<Round> {
+  return normalise(await post('/api/tournaments', { name }))
 }

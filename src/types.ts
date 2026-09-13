@@ -80,7 +80,27 @@ export interface TourplayLink {
   lastSyncedAt: string | null
 }
 
+/** One tournament, as listed in the selector. */
+export interface TournamentSummary {
+  id: number
+  name: string
+  slug: string | null
+  syncEnabled: boolean
+}
+
+/** One round within a tournament. */
+export interface RoundSummary {
+  id: number
+  roundNumber: number
+}
+
 export interface Round {
+  /** Every tournament, for the selector. */
+  tournaments: TournamentSummary[]
+  activeTournamentId: number
+  /** The rounds of the active tournament. */
+  rounds: RoundSummary[]
+  activeRoundId: number
   /** When the database last accepted a save. Absent when running on the fixture. */
   updatedAt?: string
   tourplay?: TourplayLink

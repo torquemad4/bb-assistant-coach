@@ -21,6 +21,7 @@ export function TourplayPanel(controller: RoundController) {
     followingTourplay,
     syncing,
     syncError,
+    liveRound,
     syncNow,
     setFollowing,
     linkPreview,
@@ -91,6 +92,14 @@ export function TourplayPanel(controller: RoundController) {
         </button>
       </div>
 
+      {liveRound !== null && (
+        <p className="tp__notice">
+          Tourplay has moved on to <strong>round {liveRound}</strong>. This screen is showing an
+          earlier round, so scores are not being pulled into it. Switch round at the top, or link
+          the tournament again to import round {liveRound}.
+        </p>
+      )}
+
       {syncError && (
         <p className="tp__error" role="alert">
           Could not reach Tourplay — the last known scores are still shown. {syncError}
@@ -158,7 +167,8 @@ export function TourplayPanel(controller: RoundController) {
           </ol>
 
           <p className="tp__warn">
-            Importing replaces the current line-up and all eight boards. Outlooks reset to zero.
+            {linkPreview.effect}. Boards and outlooks for that round are replaced; other
+            tournaments and rounds are left alone.
           </p>
 
           {linkError && (

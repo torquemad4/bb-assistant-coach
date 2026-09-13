@@ -1,5 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { fetchRound, linkTournament, saveRound, setSyncMode, syncNow, toSaveBoard, type LinkPreview } from '../api'
+import {
+  activate,
+  createTournament,
+  fetchRound,
+  linkTournament,
+  saveRound,
+  setSyncMode,
+  syncNow,
+  toSaveBoard,
+  type LinkPreview,
+} from '../api'
 import { SEED_ROUND } from '../data/round'
 import {
   OUTLOOK_MAX,
@@ -71,6 +81,8 @@ export interface RoundController {
   /** True while match state is being pulled from Tourplay. */
   syncing: boolean
   syncError: string | null
+  /** Tourplay has moved on to this round, while an earlier one is on screen. */
+  liveRound: number | null
   /** Match state comes from Tourplay and is not edited by hand. */
   followingTourplay: boolean
   syncNow: () => void
@@ -79,6 +91,10 @@ export interface RoundController {
   linkPreview: LinkPreview | null
   linkError: string | null
   linking: boolean
+  /** Switching what is on screen — shared with every other viewer. */
+  switching: boolean
+  switchTo: (tournamentId?: number, roundId?: number) => void
+  addTournament: (name: string) => void
   previewLink: (slug: string) => void
   confirmLink: () => void
   cancelLink: () => void
@@ -101,9 +117,11 @@ export function useRound(): RoundController {
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null)
   const [syncing, setSyncing] = useState(false)
   const [syncError, setSyncError] = useState<string | null>(null)
+  const [liveRound, setLiveRound] = useState<number | null>(null)
   const [linkPreview, setLinkPreview] = useState<LinkPreview | null>(null)
   const [linkError, setLinkError] = useState<string | null>(null)
   const [linking, setLinking] = useState(false)
+  const [switching, setSwitching] = useState(false)
 
   const dirtyBoardIds = useMemo(() => {
     const byId = new Map(baseline.boards.map((b) => [b.id, b]))
@@ -150,9 +168,10 @@ export function useRound(): RoundController {
   const applySync = useCallback(async () => {
     setSyncing(true)
     try {
-      const fresh = await syncNow()
-      setRound(fresh)
-      setBaseline(fresh)
+      const result = await syncNow()
+      setRound(result.round)
+      setBaseline(result.round)
+      setLiveRound(result.liveRound)
       setSyncError(null)
     } catch (cause) {
       setSyncError(cause instanceof Error ? cause.message : String(cause))
@@ -296,6 +315,33 @@ export function useRound(): RoundController {
     }
   }, [linkPreview])
 
+  const switchTo = useCallback(async (tournamentId?: number, roundId?: number) => {
+    setSwitching(true)
+    try {
+      const fresh = await activate(tournamentId, roundId)
+      setRound(fresh)
+      setBaseline(fresh)
+      setSyncError(null)
+    } catch (cause) {
+      setSyncError(cause instanceof Error ? cause.message : String(cause))
+    } finally {
+      setSwitching(false)
+    }
+  }, [])
+
+  const addTournament = useCallback(async (name: string) => {
+    setSwitching(true)
+    try {
+      const fresh = await createTournament(name)
+      setRound(fresh)
+      setBaseline(fresh)
+    } catch (cause) {
+      setSyncError(cause instanceof Error ? cause.message : String(cause))
+    } finally {
+      setSwitching(false)
+    }
+  }, [])
+
   const aggregate = useMemo(
     () => round.boards.reduce((total, board) => total + board.outlook, 0),
     [round.boards],
@@ -321,6 +367,7 @@ export function useRound(): RoundController {
     reload,
     syncing,
     syncError,
+    liveRound,
     followingTourplay,
     syncNow: () => void applySync(),
     setFollowing: (enabled: boolean) => void setFollowing(enabled),
@@ -330,5 +377,8 @@ export function useRound(): RoundController {
     previewLink: (slug: string) => void previewLink(slug),
     confirmLink: () => void confirmLink(),
     cancelLink: () => setLinkPreview(null),
+    switching,
+    switchTo: (tournamentId?: number, roundId?: number) => void switchTo(tournamentId, roundId),
+    addTournament: (name: string) => void addTournament(name),
   }
 }

@@ -1389,3 +1389,90 @@ h1 {
 .control .ctl-row {
   max-height: 78px;
 }
+
+/* ---------- tournament / round selectors ---------- */
+
+.sel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.sel__field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.sel__label {
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.sel__input {
+  min-height: 40px;
+  max-width: 260px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--bg-sunken);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.sel__field--round .sel__input {
+  min-width: 68px;
+  font-variant-numeric: tabular-nums;
+}
+
+.sel__input:disabled {
+  color: var(--ink-faint);
+}
+
+.sel__hint {
+  align-self: end;
+  padding-bottom: 10px;
+  font-size: 0.68rem;
+  color: var(--pending);
+}
+
+.tp__notice {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--pending-soft);
+  border: 1px solid rgba(240, 180, 41, 0.35);
+  color: var(--pending);
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+.boards-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 200px;
+  padding: 24px;
+  background: var(--bg-raised);
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  text-align: center;
+  color: var(--ink-dim);
+  font-size: 0.85rem;
+}
+
+.boards-empty p {
+  margin: 0;
+  max-width: 44ch;
+  line-height: 1.5;
+}

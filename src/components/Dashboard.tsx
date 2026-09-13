@@ -19,6 +19,16 @@ export function Dashboard({ round, aggregate, aggregateRange }: RoundController)
         </span>
       </div>
 
+      {round.boards.length === 0 ? (
+        <div className="boards-empty">
+          <p>
+            <strong>No boards in this round yet.</strong>
+          </p>
+          <p>
+            On Match Control, link a Tourplay tournament to import the draw, or add boards by hand.
+          </p>
+        </div>
+      ) : (
       <div className="boards" data-count={round.boards.length}>
         {round.boards.map((board) => (
           <BoardCard
@@ -29,6 +39,7 @@ export function Dashboard({ round, aggregate, aggregateRange }: RoundController)
           />
         ))}
       </div>
+      )}
 
       <RoundOutlook boards={round.boards} aggregate={aggregate} range={aggregateRange} />
     </div>
