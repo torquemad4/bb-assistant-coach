@@ -26,13 +26,17 @@ npm run cf-login   # once per machine — opens a browser to authorise wrangler
 npm run deploy     # builds, then wrangler deploy
 ```
 
-Two things have to be true before that works:
+Three things have to be true before that works:
 
-1. **The `englandbb.co.uk` zone must sit on the Cloudflare account you authorise.**
-   Wrangler can only attach a custom domain to a zone the account holds. If the
-   domain is on someone else's account, either move the zone, or drop the `routes`
-   block and have whoever runs DNS point a CNAME at the `workers.dev` hostname.
-2. **You must run it from a machine with network access to `api.cloudflare.com`.**
+1. **The `englandbb.co.uk` zone must sit on the Cloudflare account you authorise,
+   on Cloudflare nameservers.** Workers custom domains — unlike Pages — do not
+   support a domain whose nameservers Cloudflare does not manage. If the domain is
+   on someone else's account, drop the `routes` block and have whoever runs DNS
+   point a CNAME at the `workers.dev` hostname instead.
+2. **`coordinator.englandbb.co.uk` must have no existing CNAME record.** Cloudflare
+   refuses to create a custom domain over one. Delete it first if it exists —
+   wrangler will add its own record.
+3. **You must run it from a machine with network access to `api.cloudflare.com`.**
    It cannot be run from a Claude Code cloud session on the default *Trusted*
    network policy — that allowlist refuses `api.cloudflare.com` at the egress
    proxy. Add it under **Custom** (see the bottom of this README) to deploy from a
