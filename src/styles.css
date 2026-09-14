@@ -1758,6 +1758,10 @@ h1 {
 }
 
 .pm__scouted {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
   font-size: 0.72rem;
   color: var(--ink-faint);
   font-variant-numeric: tabular-nums;
@@ -1772,6 +1776,82 @@ h1 {
   color: var(--ink-dim);
   font-size: 0.78rem;
   line-height: 1.45;
+}
+
+.pm__scouted-when {
+  white-space: nowrap;
+}
+
+.pm__data-date {
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--level-soft);
+  color: var(--ink-faint);
+  font-size: 0.68rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* The pull is a read, not a write: it takes the UI face, not the amber that
+   marks unsaved work. */
+.pm__pull {
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--bg-raised);
+  color: var(--ink);
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.pm__pull:hover:not(:disabled) {
+  border-color: var(--ink-faint);
+}
+
+.pm__pull:disabled {
+  color: var(--ink-disabled);
+  border-color: var(--line-soft);
+  cursor: default;
+}
+
+.pm__error {
+  margin: 0;
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--down-soft);
+  border: 1px solid var(--down);
+  color: var(--ink);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+/* Not an error: a partial pull is the normal state until every coach has a NAF
+   number, so it reads as a list of work to do rather than a failure. */
+.pm__skipped {
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-sunken);
+  border: 1px solid var(--line);
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
+.pm__skipped-head {
+  margin: 0 0 4px;
+  color: var(--ink-dim);
+  font-weight: 700;
+}
+
+.pm__skipped ul {
+  margin: 0 0 8px;
+  padding-left: 18px;
+  color: var(--ink-dim);
+}
+
+.pm__skipped li + li {
+  margin-top: 2px;
 }
 
 .pm__blocked {

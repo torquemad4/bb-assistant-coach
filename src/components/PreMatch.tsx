@@ -212,9 +212,14 @@ function PreMatchCard({ board, scout, controller, countryA, countryB, index, cou
 
 /** Tab three: the pre-round read on every board, and where boards get tagged. */
 export function PreMatch(controller: RoundController) {
-  const { round, isDirty } = controller
+  const { round, isDirty, refreshScout, scouting, scoutError, scoutSkipped, scoutedCount, connection } =
+    controller
   const scout = round.scout
   const byBoard = new Map((scout?.boards ?? []).map((b) => [b.boardId, b]))
+
+  // Every seat that failed for want of a NAF number can be retried with a name
+  // lookup; anything else (an engine error, a vacant opponent) cannot.
+  const missingNumbers = scoutSkipped.filter((s) => s.reason.startsWith('no NAF number'))
 
   return (
     <div className="pm">
@@ -226,14 +231,26 @@ export function PreMatch(controller: RoundController) {
           scouting travel with it.
         </p>
         <span className="pm__scouted">
-          {scout
-            ? `Scouted ${new Date(scout.generatedAt).toLocaleString([], {
-                day: 'numeric',
-                month: 'short',
-                hour: '2-digit',
-                minute: '2-digit',
-              })}`
-            : 'No scouting delivered for this round'}
+          <span className="pm__scouted-when" title={scout?.vs200Basis}>
+            {scout
+              ? `Scouted ${new Date(scout.generatedAt).toLocaleString([], {
+                  day: 'numeric',
+                  month: 'short',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}`
+              : 'No scouting yet for this round'}
+          </span>
+          {scout?.dataDate && <span className="pm__data-date">NAF data {scout.dataDate}</span>}
+          <button
+            type="button"
+            className="pm__pull"
+            onClick={() => refreshScout(false)}
+            disabled={scouting || connection !== 'live'}
+            title="Pull fresh scouting from the NAF Scout engine"
+          >
+            {scouting ? 'Scouting…' : scout ? 'Re-scout' : 'Scout this round'}
+          </button>
         </span>
       </div>
 
@@ -244,10 +261,50 @@ export function PreMatch(controller: RoundController) {
         </p>
       )}
 
+      {scoutError && (
+        <p className="pm__error">
+          <strong>Scouting failed.</strong> {scoutError}
+        </p>
+      )}
+
+      {scoutSkipped.length > 0 && (
+        <div className="pm__skipped">
+          <p className="pm__skipped-head">
+            {scoutedCount === 0
+              ? 'No coach could be scouted:'
+              : `Scouted ${scoutedCount}, but ${scoutSkipped.length} seat${
+                  scoutSkipped.length === 1 ? '' : 's'
+                } could not be:`}
+          </p>
+          <ul>
+            {scoutSkipped.map((skip) => (
+              <li key={`${skip.boardId}-${skip.side}`}>
+                <strong>
+                  Board {skip.boardId} {skip.side.toUpperCase()} · {skip.coach}
+                </strong>{' '}
+                — {skip.reason}
+              </li>
+            ))}
+          </ul>
+          {missingNumbers.length > 0 && (
+            <button
+              type="button"
+              className="pm__pull"
+              onClick={() => refreshScout(true)}
+              disabled={scouting || connection !== 'live'}
+              title="Ask the engine to find these coaches by NAF name. Only an exact, unambiguous match is used."
+            >
+              Try matching {missingNumbers.length} by name
+            </button>
+          )}
+        </div>
+      )}
+
       {!scout && (
         <p className="pm__empty">
-          NAF Scout has not delivered scouting for this round. Boards can still be tagged — every
-          figure below will show as a dash until it arrives.
+          No scouting for this round yet. Press <strong>Scout this round</strong> to pull it from
+          the NAF Scout engine. Boards can be tagged either way — every figure below shows as a
+          dash until scouting arrives.
         </p>
       )}
 

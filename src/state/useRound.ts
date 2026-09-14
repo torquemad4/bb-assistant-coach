@@ -7,11 +7,13 @@ import {
   unlockBoardTag,
   linkTournament,
   moveBoard,
+  refreshScouting,
   saveRound,
   setSyncMode,
   syncNow,
   toSaveBoard,
   type LinkPreview,
+  type ScoutSkip,
 } from '../api'
 import { SEED_ROUND } from '../data/round'
 import {
@@ -90,6 +92,13 @@ export interface RoundController {
    */
   moveBoard: (boardId: number, direction: 1 | -1) => void
   reordering: boolean
+  /** Pull scouting from the NAF Scout engine for the round on screen. */
+  refreshScout: (resolveByName?: boolean) => void
+  scouting: boolean
+  scoutError: string | null
+  /** Seats the last pull could not scout. Empty after a clean pull. */
+  scoutSkipped: ScoutSkip[]
+  scoutedCount: number | null
   setKickoff: (boardId: number, kickoff: Kickoff) => void
   /** Throw away unsaved edits and go back to the last saved state. */
   discard: () => void
@@ -142,6 +151,10 @@ export function useRound(): RoundController {
   const [switching, setSwitching] = useState(false)
   const [tagging, setTagging] = useState(false)
   const [reordering, setReordering] = useState(false)
+  const [scouting, setScouting] = useState(false)
+  const [scoutError, setScoutError] = useState<string | null>(null)
+  const [scoutSkipped, setScoutSkipped] = useState<ScoutSkip[]>([])
+  const [scoutedCount, setScoutedCount] = useState<number | null>(null)
 
   const dirtyBoardIds = useMemo(() => {
     const byId = new Map(baseline.boards.map((b) => [b.id, b]))
@@ -426,6 +439,29 @@ export function useRound(): RoundController {
     }
   }, [])
 
+  // Unlike tagging and reordering, this is safe to run with unsaved edits —
+  // but only because it takes the scouting out of the response and leaves the
+  // boards alone. Swallowing the whole round here would discard work in
+  // progress exactly as they would.
+  const applyScout = useCallback(async (resolveByName = false) => {
+    setScouting(true)
+    setScoutError(null)
+    try {
+      const result = await refreshScouting({ resolveByName })
+      setRound((current) => ({ ...current, scout: result.round.scout }))
+      setBaseline((current) => ({ ...current, scout: result.round.scout }))
+      setScoutSkipped(result.skipped)
+      setScoutedCount(result.scouted)
+    } catch (cause) {
+      setScoutError(cause instanceof Error ? cause.message : String(cause))
+      const skipped = (cause as { skipped?: ScoutSkip[] })?.skipped
+      setScoutSkipped(skipped ?? [])
+      setScoutedCount(0)
+    } finally {
+      setScouting(false)
+    }
+  }, [])
+
   const aggregate = useMemo(
     () => round.boards.reduce((total, board) => total + board.outlook, 0),
     [round.boards],
@@ -452,6 +488,11 @@ export function useRound(): RoundController {
     tagging,
     moveBoard: (boardId: number, direction: 1 | -1) => void applyMove(boardId, direction),
     reordering,
+    refreshScout: (resolveByName?: boolean) => void applyScout(resolveByName),
+    scouting,
+    scoutError,
+    scoutSkipped,
+    scoutedCount,
     discard,
     save: () => void save(),
     reload,

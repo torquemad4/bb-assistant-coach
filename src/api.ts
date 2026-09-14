@@ -176,6 +176,53 @@ export async function createTournament(name: string): Promise<Round> {
   return normalise(await post('/api/tournaments', { name }))
 }
 
+/** One seat the pull could not scout, and why. */
+export interface ScoutSkip {
+  boardId: number
+  side: 'a' | 'b'
+  coach: string
+  reason: string
+}
+
+export interface ScoutRefresh {
+  round: Round
+  scouted: number
+  skipped: ScoutSkip[]
+}
+
+/**
+ * Has the Worker pull scouting from the NAF Scout engine for the active round.
+ *
+ * `resolveByName` lets the engine find a coach whose NAF number is missing from
+ * the roster, and only accepts an unambiguous exact match — a wrong match would
+ * put another coach's whole career under this one's name.
+ */
+export async function refreshScouting(opts: { resolveByName?: boolean; scope?: string } = {}): Promise<ScoutRefresh> {
+  const query = new URLSearchParams()
+  if (opts.resolveByName) query.set('resolve', 'name')
+  if (opts.scope) query.set('scope', opts.scope)
+  const suffix = query.toString() ? `?${query}` : ''
+
+  const response = await fetch(`/api/scout/refresh${suffix}`, {
+    method: 'POST',
+    headers: { accept: 'application/json' },
+  })
+  const payload = await response.json().catch(() => null)
+  if (!response.ok) {
+    // A failed pull still explains itself per seat, which is the useful half.
+    const error = new Error(payload?.error ?? `${response.status} ${response.statusText}`) as Error & {
+      skipped?: ScoutSkip[]
+    }
+    error.skipped = payload?.skipped ?? []
+    throw error
+  }
+  return {
+    round: normalise(payload),
+    scouted: payload.refresh?.scouted ?? 0,
+    skipped: payload.refresh?.skipped ?? [],
+  }
+}
+
 /** Tags a board, which locks it and seeds its outlook. */
 export async function setBoardTag(boardId: number, tag: string | null): Promise<Round> {
   return normalise(await post('/api/tag', { boardId, tag }))

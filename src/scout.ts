@@ -6,14 +6,31 @@
  * pre-crunches NAF data and delivers one `ScoutRound` per round; the pre-match
  * view renders it and computes nothing.
  *
- * Deliver it with `PUT /api/scout` (body: ScoutRound) against the active round,
- * or write it into the `scout` table keyed by round id.
+ * It arrives one of two ways:
+ *
+ *   PULL (normal)  `POST /api/scout/refresh` has the Worker call the NAF Scout
+ *                  engine itself and store the result. See `worker/scout.ts`
+ *                  for the mapping. Nothing has to be delivered by hand.
+ *   PUSH (manual)  `PUT /api/scout` (body: ScoutRound) writes a round's
+ *                  scouting directly — an override for when the engine cannot
+ *                  answer, or for figures it does not yet serve.
  *
  * Every statistic is optional. A missing figure renders as "—" rather than a
  * zero: at a tournament, "no data" and "played none, won none" must not look
  * alike.
  *
- * Where the underlying NAF data lives, for Scout's reference:
+ * THE ENGINE: a FastAPI service over the official NAF database dump, hosted at
+ * https://bb-county-app.azurewebsites.net and shared with the England BB site.
+ * Source in `torquemad4/bb-county-tool`; its own docs at `{base}/docs`. It also
+ * powers the county tool, so it is not this app's to break.
+ *
+ * Two figures it has no endpoint for yet, both left empty rather than faked:
+ *   `form`     no last-N-games endpoint, though the engine holds the per-game
+ *              frame that would back one
+ *   `matchup`  its matchup grid is one coach's races, not the global race
+ *              matrix this needs
+ *
+ * Where the underlying NAF data lives, for reference:
  *   coachpage  index.php?module=NAF&type=coachpage&coach={naf}
  *              per-race table: rating, matches, record, win%, TD diff
  *   gamelist   index.php?module=NAF&type=gamelist&coach={naf}[&race={race}]
@@ -22,11 +39,12 @@
  *   racematrix index.php?module=NAF&type=racematrix
  *   head2head  index.php?module=NAF&type=head2head
  *
- * KNOWN GAP: gamelist does not carry the opponent's NAF rating *at the time of
- * the game*, so the "vs 200+" figures cannot be derived exactly from it. Scout
- * decides how to approximate (e.g. the opponent's current rating in that race)
- * and says so in `vs200Basis`, which the view shows on hover so the number is
- * never read as more precise than it is.
+ * WHAT "vs 200+" MEANS: the engine counts an opponent as established by their
+ * PEAK career Regular ELO, not their rating on the day — NAF's gamelist does not
+ * carry a historic rating, so "has at some point been a 200+ coach" is the
+ * question actually being answered. Whatever fills this contract says how it did
+ * it in `vs200Basis`, which the view shows, so the number is never read as more
+ * precise than it is.
  */
 
 /** A win/draw/loss record. `winRate` is a percentage, 0–100, draws counting as half. */
@@ -104,6 +122,12 @@ export interface ScoutRound {
   generatedAt: string
   /** How "vs 200+" was approximated. Shown on hover. */
   vs200Basis?: string
+  /**
+   * Date of the NAF dump the figures were drawn from. The NAF publishes once a
+   * day, so this answers "is this today's data?" — a different question from
+   * when the pull ran, and the one that matters the morning of a tournament.
+   */
+  dataDate?: string | null
   boards: ScoutBoard[]
 }
 

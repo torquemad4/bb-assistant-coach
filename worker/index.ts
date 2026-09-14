@@ -18,10 +18,13 @@
  */
 
 import { fetchLiveRound, fetchTournament, type LiveMatch } from './tourplay'
+import { pullScouting } from './scout'
 
 export interface Env {
   DB: D1Database
   ASSETS: Fetcher
+  /** Base URL of the NAF Scout engine. Unset falls back to the hosted service. */
+  SCOUT_API_URL?: string
 }
 
 /** Every viewer polls, so Tourplay is only re-read when the data is older than this. */
@@ -512,6 +515,75 @@ export default {
         .bind(tag, outlook, board.id)
         .run()
       return json(await readState(env.DB))
+    }
+
+    // ---- POST /api/scout/refresh : pull scouting from the NAF Scout engine ----
+    if (path === '/api/scout/refresh') {
+      if (request.method !== 'POST') return json({ error: `${request.method} not allowed` }, 405)
+      const active = await resolveActive(env.DB)
+      if (!active) return json({ error: 'No round is set up' }, 404)
+
+      const boards = await env.DB.prepare('SELECT * FROM board WHERE round_id = ? ORDER BY board_no')
+        .bind(active.round.id)
+        .all<BoardRow>()
+      const rows = boards.results ?? []
+      if (rows.length === 0) return json({ error: 'This round has no boards to scout' }, 400)
+
+      let result
+      try {
+        result = await pullScouting(
+          rows.map((row) => ({
+            id: row.board_no,
+            a: {
+              nafName: row.a_naf_name,
+              nafNumber: row.a_naf_number,
+              race: row.a_race,
+              vacant: row.a_vacant === 1,
+            },
+            b: {
+              nafName: row.b_naf_name,
+              nafNumber: row.b_naf_number,
+              race: row.b_race,
+              vacant: row.b_vacant === 1,
+            },
+          })),
+          {
+            base: env.SCOUT_API_URL,
+            scope: url.searchParams.get('scope') ?? undefined,
+            resolveByName: url.searchParams.get('resolve') === 'name',
+          },
+        )
+      } catch (cause) {
+        // Only a failure that took the whole pull down lands here — a single
+        // coach failing is reported as a skip, not an error.
+        return json({ error: `Scout engine unreachable: ${String(cause)}` }, 502)
+      }
+
+      // Nothing is stored unless at least one coach came back. A pull that
+      // reached nobody must not wipe the scouting already on screen.
+      if (result.scouted === 0) {
+        return json(
+          {
+            error: 'Nothing could be scouted, so the existing scouting was left alone',
+            skipped: result.skipped,
+          },
+          502,
+        )
+      }
+
+      await env.DB.prepare(
+        `INSERT INTO scout (round_id, payload, generated_at, updated_at)
+         VALUES (?, ?, ?, datetime('now'))
+           ON CONFLICT(round_id) DO UPDATE
+              SET payload = excluded.payload,
+                  generated_at = excluded.generated_at,
+                  updated_at = datetime('now')`,
+      )
+        .bind(active.round.id, JSON.stringify(result.round), result.round.generatedAt)
+        .run()
+
+      const state = await readState(env.DB)
+      return json({ ...state, refresh: { scouted: result.scouted, skipped: result.skipped } })
     }
 
     // ---- PUT /api/scout : NAF Scout delivers a round's scouting ----
