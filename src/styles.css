@@ -1851,7 +1851,47 @@ h1 {
 }
 
 .pm__skipped li + li {
+  margin-top: 6px;
+}
+
+/* The seats a reason hit, under the reason rather than beside it: the sentence
+   is the thing to read, the names are the detail. */
+.pm__skipped-who {
+  display: block;
+  color: var(--ink-faint);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.pm__skipped-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.pm__ping {
+  margin: 8px 0 0;
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--down-soft);
+  border: 1px solid var(--down);
+  font-size: 0.74rem;
+  line-height: 1.5;
+}
+
+.pm__ping--ok {
+  background: var(--up-soft);
+  border-color: var(--up);
+}
+
+.pm__ping-base {
+  display: block;
   margin-top: 2px;
+  color: var(--ink-faint);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.7rem;
+  word-break: break-all;
 }
 
 .pm__blocked {

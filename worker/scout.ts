@@ -143,23 +143,86 @@ function timeoutSignal(): AbortSignal {
   return AbortSignal.timeout(REQUEST_TIMEOUT_MS)
 }
 
-async function getJson(url: string): Promise<any> {
-  const response = await fetch(url, {
-    signal: timeoutSignal(),
-    headers: { accept: 'application/json' },
-  })
-  if (!response.ok) {
-    // The engine sends FastAPI's { detail } on a 4xx; anything else is the host.
-    let detail = `${response.status} ${response.statusText}`
-    try {
-      const body = (await response.json()) as { detail?: string }
-      if (body?.detail) detail = body.detail
-    } catch {
-      /* not JSON — the status line will do */
-    }
-    throw new Error(detail)
+/**
+ * Turns a failed response into something a coordinator can act on.
+ *
+ * A bare status number reads like a bug in this app when it is usually the host
+ * in front of the engine — App Service answering while the container is down,
+ * say. So: the code, what layer it came from, and whatever the body said.
+ */
+async function describeFailure(response: Response): Promise<string> {
+  const text = await response.text().catch(() => '')
+
+  // FastAPI puts the real reason in { detail }; the platform sends HTML.
+  let detail = ''
+  try {
+    const body = JSON.parse(text) as { detail?: string }
+    if (body?.detail) detail = String(body.detail)
+  } catch {
+    // Not JSON, so it did not come from the engine — an HTML error page from
+    // Azure or whatever sits in front of it. Collapse it to one readable line.
+    detail = text.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 140)
   }
+
+  // Runtimes hand back "unknown" for a status they have no name for, which
+  // reads as a second, mysterious fault rather than a missing label.
+  const named = response.statusText && response.statusText.toLowerCase() !== 'unknown'
+  const status = `HTTP ${response.status}${named ? ` ${response.statusText}` : ''}`
+  const engine = response.status < 500 && detail && !text.startsWith('<')
+  return engine ? `${status} from the engine: ${detail}` : detail ? `${status} — ${detail}` : status
+}
+
+async function getJson(url: string): Promise<any> {
+  let response: Response
+  try {
+    response = await fetch(url, { signal: timeoutSignal(), headers: { accept: 'application/json' } })
+  } catch (cause) {
+    // Never reached the service at all: DNS, TLS, refused, or the timeout.
+    const reason = cause instanceof Error ? cause.message : String(cause)
+    throw new Error(`could not reach the engine (${reason})`)
+  }
+  if (!response.ok) throw new Error(await describeFailure(response))
   return response.json()
+}
+
+/**
+ * Asks the engine whether it is up, without pulling anything.
+ *
+ * Worth its own endpoint: when every coach fails with the same message, the
+ * question is not about the coaches, and a coordinator should not have to run a
+ * whole pull to find out whether the service is even answering.
+ */
+export async function pingEngine(base?: string): Promise<{
+  base: string
+  ok: boolean
+  health: string
+  version: string | null
+}> {
+  const url = (base ?? DEFAULT_BASE).replace(/\/+$/, '')
+  let ok = false
+  let health: string
+  try {
+    const response = await fetch(`${url}/health`, {
+      signal: timeoutSignal(),
+      headers: { accept: 'application/json' },
+    })
+    ok = response.ok
+    health = response.ok ? 'answering' : await describeFailure(response)
+  } catch (cause) {
+    health = `could not reach it (${cause instanceof Error ? cause.message : String(cause)})`
+  }
+
+  let version: string | null = null
+  if (ok) {
+    try {
+      const payload = await getJson(`${url}/version`)
+      version = JSON.stringify(payload).slice(0, 200)
+    } catch {
+      /* the health line is the answer that matters */
+    }
+  }
+
+  return { base: url, ok, health, version }
 }
 
 /**

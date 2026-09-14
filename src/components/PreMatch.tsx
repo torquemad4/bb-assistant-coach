@@ -212,14 +212,37 @@ function PreMatchCard({ board, scout, controller, countryA, countryB, index, cou
 
 /** Tab three: the pre-round read on every board, and where boards get tagged. */
 export function PreMatch(controller: RoundController) {
-  const { round, isDirty, refreshScout, scouting, scoutError, scoutSkipped, scoutedCount, connection } =
-    controller
+  const {
+    round,
+    isDirty,
+    refreshScout,
+    scouting,
+    scoutError,
+    scoutSkipped,
+    scoutedCount,
+    enginePing,
+    pingEngine,
+    pinging,
+    connection,
+  } = controller
   const scout = round.scout
   const byBoard = new Map((scout?.boards ?? []).map((b) => [b.boardId, b]))
 
   // Every seat that failed for want of a NAF number can be retried with a name
   // lookup; anything else (an engine error, a vacant opponent) cannot.
   const missingNumbers = scoutSkipped.filter((s) => s.reason.startsWith('no NAF number'))
+
+  // When the engine is down every seat fails the same way, and sixteen copies
+  // of one sentence hide what happened. One line per distinct reason, with the
+  // seats it hit named underneath.
+  const byReason = new Map<string, typeof scoutSkipped>()
+  for (const skip of scoutSkipped) {
+    const seats = byReason.get(skip.reason)
+    if (seats) seats.push(skip)
+    else byReason.set(skip.reason, [skip])
+  }
+  const seatLabel = (skip: (typeof scoutSkipped)[number]) =>
+    `${skip.boardId}${skip.side.toUpperCase()} ${skip.coach.trim()}`
 
   return (
     <div className="pm">
@@ -277,25 +300,47 @@ export function PreMatch(controller: RoundController) {
                 } could not be:`}
           </p>
           <ul>
-            {scoutSkipped.map((skip) => (
-              <li key={`${skip.boardId}-${skip.side}`}>
+            {[...byReason].map(([reason, seats]) => (
+              <li key={reason}>
                 <strong>
-                  Board {skip.boardId} {skip.side.toUpperCase()} · {skip.coach}
+                  {seats.length} seat{seats.length === 1 ? '' : 's'}
                 </strong>{' '}
-                — {skip.reason}
+                — {reason}
+                <span className="pm__skipped-who">{seats.map(seatLabel).join(' · ')}</span>
               </li>
             ))}
           </ul>
-          {missingNumbers.length > 0 && (
+
+          <div className="pm__skipped-actions">
+            {missingNumbers.length > 0 && (
+              <button
+                type="button"
+                className="pm__pull"
+                onClick={() => refreshScout(true)}
+                disabled={scouting || connection !== 'live'}
+                title="Ask the engine to find these coaches by NAF name. Only an exact, unambiguous match is used."
+              >
+                Try matching {missingNumbers.length} by name
+              </button>
+            )}
             <button
               type="button"
               className="pm__pull"
-              onClick={() => refreshScout(true)}
-              disabled={scouting || connection !== 'live'}
-              title="Ask the engine to find these coaches by NAF name. Only an exact, unambiguous match is used."
+              onClick={pingEngine}
+              disabled={pinging || connection !== 'live'}
+              title="Ask the Scout engine whether it is answering at all"
             >
-              Try matching {missingNumbers.length} by name
+              {pinging ? 'Testing…' : 'Test the engine'}
             </button>
+          </div>
+
+          {enginePing && (
+            <p className={`pm__ping${enginePing.ok ? ' pm__ping--ok' : ''}`}>
+              <strong>{enginePing.ok ? 'Engine is up.' : 'Engine is not answering.'}</strong>{' '}
+              {enginePing.health}
+              {enginePing.base && <span className="pm__ping-base">{enginePing.base}</span>}
+              {enginePing.version && <span className="pm__ping-base">{enginePing.version}</span>}
+            </p>
           )}
         </div>
       )}

@@ -176,6 +176,20 @@ export async function createTournament(name: string): Promise<Round> {
   return normalise(await post('/api/tournaments', { name }))
 }
 
+export interface EnginePing {
+  base: string
+  ok: boolean
+  health: string
+  version: string | null
+}
+
+/** Asks whether the Scout engine is answering, without pulling anything. */
+export async function pingScoutEngine(): Promise<EnginePing> {
+  const response = await fetch('/api/scout/ping', { headers: { accept: 'application/json' } })
+  if (!response.ok) throw new Error(await errorFrom(response))
+  return response.json()
+}
+
 /** One seat the pull could not scout, and why. */
 export interface ScoutSkip {
   boardId: number

@@ -7,11 +7,13 @@ import {
   unlockBoardTag,
   linkTournament,
   moveBoard,
+  pingScoutEngine,
   refreshScouting,
   saveRound,
   setSyncMode,
   syncNow,
   toSaveBoard,
+  type EnginePing,
   type LinkPreview,
   type ScoutSkip,
 } from '../api'
@@ -99,6 +101,10 @@ export interface RoundController {
   /** Seats the last pull could not scout. Empty after a clean pull. */
   scoutSkipped: ScoutSkip[]
   scoutedCount: number | null
+  /** Result of the last engine test, so a wholesale failure can be placed. */
+  enginePing: EnginePing | null
+  pingEngine: () => void
+  pinging: boolean
   setKickoff: (boardId: number, kickoff: Kickoff) => void
   /** Throw away unsaved edits and go back to the last saved state. */
   discard: () => void
@@ -155,6 +161,8 @@ export function useRound(): RoundController {
   const [scoutError, setScoutError] = useState<string | null>(null)
   const [scoutSkipped, setScoutSkipped] = useState<ScoutSkip[]>([])
   const [scoutedCount, setScoutedCount] = useState<number | null>(null)
+  const [enginePing, setEnginePing] = useState<EnginePing | null>(null)
+  const [pinging, setPinging] = useState(false)
 
   const dirtyBoardIds = useMemo(() => {
     const byId = new Map(baseline.boards.map((b) => [b.id, b]))
@@ -462,6 +470,22 @@ export function useRound(): RoundController {
     }
   }, [])
 
+  const applyPing = useCallback(async () => {
+    setPinging(true)
+    try {
+      setEnginePing(await pingScoutEngine())
+    } catch (cause) {
+      setEnginePing({
+        base: '',
+        ok: false,
+        health: cause instanceof Error ? cause.message : String(cause),
+        version: null,
+      })
+    } finally {
+      setPinging(false)
+    }
+  }, [])
+
   const aggregate = useMemo(
     () => round.boards.reduce((total, board) => total + board.outlook, 0),
     [round.boards],
@@ -493,6 +517,9 @@ export function useRound(): RoundController {
     scoutError,
     scoutSkipped,
     scoutedCount,
+    enginePing,
+    pingEngine: () => void applyPing(),
+    pinging,
     discard,
     save: () => void save(),
     reload,

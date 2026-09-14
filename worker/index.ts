@@ -18,7 +18,7 @@
  */
 
 import { fetchLiveRound, fetchTournament, type LiveMatch } from './tourplay'
-import { pullScouting } from './scout'
+import { pingEngine, pullScouting } from './scout'
 
 export interface Env {
   DB: D1Database
@@ -515,6 +515,12 @@ export default {
         .bind(tag, outlook, board.id)
         .run()
       return json(await readState(env.DB))
+    }
+
+    // ---- GET /api/scout/ping : is the Scout engine answering at all? ----
+    if (path === '/api/scout/ping') {
+      if (request.method !== 'GET') return json({ error: `${request.method} not allowed` }, 405)
+      return json(await pingEngine(env.SCOUT_API_URL))
     }
 
     // ---- POST /api/scout/refresh : pull scouting from the NAF Scout engine ----
