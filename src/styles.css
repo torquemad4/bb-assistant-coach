@@ -1778,6 +1778,53 @@ h1 {
   line-height: 1.45;
 }
 
+/* Provisional line-up. Uses the unsaved-work amber rather than the red of a
+   failure: nothing is broken, the data is just not final yet. */
+.provisional {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px clamp(12px, 1.5vw, 20px);
+  background: var(--pending-soft);
+  border-bottom: 1px solid var(--pending);
+  color: var(--ink);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.provisional__tag {
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--pending);
+  color: var(--pending-ink);
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.control__provisional {
+  min-height: var(--tap);
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--bg-raised);
+  color: var(--ink-dim);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.control__provisional.is-on {
+  border-color: var(--pending);
+  color: var(--pending);
+}
+
+.control__provisional:disabled {
+  color: var(--ink-disabled);
+  cursor: default;
+}
+
 .pm__scouted-when {
   white-space: nowrap;
 }

@@ -129,6 +129,13 @@ export interface RoundSummary {
 }
 
 export interface Round {
+  /**
+   * True while the line-up is a stand-in — coaches or races that may still
+   * change. Placeholder races look exactly like real ones on screen, and
+   * scouting run against them reads as intel when it is fiction, so the app
+   * says so wherever the line-up is shown.
+   */
+  rostersProvisional: boolean
   /** Scouting for this round, as delivered by NAF Scout. Null until it arrives. */
   scout: ScoutRound | null
   /** Every tournament, for the selector. */

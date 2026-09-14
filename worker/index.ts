@@ -53,6 +53,7 @@ interface TournamentRow {
   sync_enabled: number
   last_synced_at: string | null
   total_rounds: number
+  rosters_provisional: number
   team_a_name: string
   team_a_country: string
   team_b_name: string
@@ -224,6 +225,7 @@ async function readState(db: D1Database) {
     totalRounds: tournament.total_rounds,
     teamA: { name: tournament.team_a_name, country: tournament.team_a_country },
     teamB: { name: tournament.team_b_name, country: tournament.team_b_country },
+    rostersProvisional: tournament.rosters_provisional === 1,
     boards: (boards.results as BoardRow[]).map(boardFromRow),
     // Parsed here so a corrupt blob fails once, on the server, rather than
     // throwing inside every viewer's render.
@@ -513,6 +515,26 @@ export default {
       const outlook = board.period === 'FT' ? board.outlook : TAG_OUTLOOK[tag]
       await env.DB.prepare('UPDATE board SET tag = ?, tag_locked = 1, outlook = ? WHERE id = ?')
         .bind(tag, outlook, board.id)
+        .run()
+      return json(await readState(env.DB))
+    }
+
+    // ---- POST /api/provisional : mark the line-up provisional, or confirmed ----
+    if (path === '/api/provisional') {
+      if (request.method !== 'POST') return json({ error: `${request.method} not allowed` }, 405)
+      let body: any
+      try {
+        body = await request.json()
+      } catch {
+        return json({ error: 'Body is not valid JSON' }, 400)
+      }
+      if (typeof body?.provisional !== 'boolean') {
+        return json({ error: 'provisional must be a boolean' }, 400)
+      }
+      const active = await resolveActive(env.DB)
+      if (!active) return json({ error: 'No round is set up' }, 404)
+      await env.DB.prepare('UPDATE tournament SET rosters_provisional = ? WHERE id = ?')
+        .bind(body.provisional ? 1 : 0, active.tournament.id)
         .run()
       return json(await readState(env.DB))
     }

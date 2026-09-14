@@ -9,6 +9,7 @@ import {
   moveBoard,
   pingScoutEngine,
   refreshScouting,
+  setProvisional,
   saveRound,
   setSyncMode,
   syncNow,
@@ -105,6 +106,8 @@ export interface RoundController {
   enginePing: EnginePing | null
   pingEngine: () => void
   pinging: boolean
+  /** Mark the line-up on screen provisional, or confirm it. */
+  setProvisional: (provisional: boolean) => void
   setKickoff: (boardId: number, kickoff: Kickoff) => void
   /** Throw away unsaved edits and go back to the last saved state. */
   discard: () => void
@@ -470,6 +473,16 @@ export function useRound(): RoundController {
     }
   }, [])
 
+  const applyProvisional = useCallback(async (provisional: boolean) => {
+    try {
+      const fresh = await setProvisional(provisional)
+      setRound((current) => ({ ...current, rostersProvisional: fresh.rostersProvisional }))
+      setBaseline((current) => ({ ...current, rostersProvisional: fresh.rostersProvisional }))
+    } catch (cause) {
+      setSaveError(cause instanceof Error ? cause.message : String(cause))
+    }
+  }, [])
+
   const applyPing = useCallback(async () => {
     setPinging(true)
     try {
@@ -520,6 +533,7 @@ export function useRound(): RoundController {
     enginePing,
     pingEngine: () => void applyPing(),
     pinging,
+    setProvisional: (provisional: boolean) => void applyProvisional(provisional),
     discard,
     save: () => void save(),
     reload,

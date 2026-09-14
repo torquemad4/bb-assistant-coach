@@ -60,6 +60,7 @@ function asCount(value: unknown): number {
 
 function normalise(payload: any): Round {
   return {
+    rostersProvisional: payload.rostersProvisional === true,
     scout: payload.scout ?? null,
     tournaments: payload.tournaments ?? [],
     activeTournamentId: payload.activeTournamentId,
@@ -174,6 +175,11 @@ export async function activate(tournamentId?: number, roundId?: number): Promise
 /** Creates an empty tournament with a single round, and switches to it. */
 export async function createTournament(name: string): Promise<Round> {
   return normalise(await post('/api/tournaments', { name }))
+}
+
+/** Marks the line-up on screen as provisional, or confirms it. */
+export async function setProvisional(provisional: boolean): Promise<Round> {
+  return normalise(await post('/api/provisional', { provisional }))
 }
 
 export interface EnginePing {

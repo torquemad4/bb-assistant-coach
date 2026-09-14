@@ -69,6 +69,16 @@ export default function App() {
         </div>
       )}
 
+      {round.rostersProvisional && (
+        <div className="provisional" role="status">
+          <span className="provisional__tag">Provisional</span>
+          <span>
+            This line-up is a stand-in — coaches or races may still change. Scouting and board
+            tags are only as true as the picks they were run against.
+          </span>
+        </div>
+      )}
+
       <main className="stage">
         {tab === 'dashboard' && <Dashboard {...controller} />}
         {tab === 'prematch' && <PreMatch {...controller} />}

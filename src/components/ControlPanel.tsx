@@ -188,6 +188,19 @@ export function ControlPanel(controller: RoundController) {
         <div className="control__actions">
           <button
             type="button"
+            className={`control__provisional${round.rostersProvisional ? ' is-on' : ''}`}
+            onClick={() => controller.setProvisional(!round.rostersProvisional)}
+            disabled={connection !== 'live'}
+            title={
+              round.rostersProvisional
+                ? 'Confirm this line-up — removes the provisional banner'
+                : 'Mark this line-up as a stand-in, so nobody reads placeholder picks as real'
+            }
+          >
+            {round.rostersProvisional ? 'Confirm line-up' : 'Mark provisional'}
+          </button>
+          <button
+            type="button"
             className="control__reset"
             onClick={discard}
             disabled={!isDirty || saving}

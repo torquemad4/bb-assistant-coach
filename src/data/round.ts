@@ -14,6 +14,8 @@ import type { Round } from '../types'
  * own them later. `nafNumber` stays null until a real NAF lookup fills it in.
  */
 export const SEED_ROUND: Round = {
+  // The committed fixture is a stand-in by definition.
+  rostersProvisional: true,
   scout: null,
   // The offline fallback is a single unnamed tournament; the selectors have
   // nothing to switch between when the database cannot be reached.
