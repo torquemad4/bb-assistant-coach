@@ -6,6 +6,7 @@ import {
   setBoardTag,
   unlockBoardTag,
   linkTournament,
+  moveBoard,
   saveRound,
   setSyncMode,
   syncNow,
@@ -83,6 +84,12 @@ export interface RoundController {
   tagBoard: (boardId: number, tag: string | null) => void
   unlockBoard: (boardId: number) => void
   tagging: boolean
+  /**
+   * Swap a board with its neighbour. The pairing moves — tag, scores and
+   * scouting travel with the coaches, not with the board number.
+   */
+  moveBoard: (boardId: number, direction: 1 | -1) => void
+  reordering: boolean
   setKickoff: (boardId: number, kickoff: Kickoff) => void
   /** Throw away unsaved edits and go back to the last saved state. */
   discard: () => void
@@ -134,6 +141,7 @@ export function useRound(): RoundController {
   const [linking, setLinking] = useState(false)
   const [switching, setSwitching] = useState(false)
   const [tagging, setTagging] = useState(false)
+  const [reordering, setReordering] = useState(false)
 
   const dirtyBoardIds = useMemo(() => {
     const byId = new Map(baseline.boards.map((b) => [b.id, b]))
@@ -400,6 +408,24 @@ export function useRound(): RoundController {
     }
   }, [])
 
+  // Reordering writes straight through too, so it would overwrite unsaved
+  // match edits with the server's copy. The arrows are disabled while dirty;
+  // this is the guard behind them.
+  const applyMove = useCallback(async (boardId: number, direction: 1 | -1) => {
+    if (guard.current.isDirty || guard.current.connection !== 'live') return
+    setReordering(true)
+    try {
+      const fresh = await moveBoard(boardId, direction)
+      setRound(fresh)
+      setBaseline(fresh)
+      setSaveError(null)
+    } catch (cause) {
+      setSaveError(cause instanceof Error ? cause.message : String(cause))
+    } finally {
+      setReordering(false)
+    }
+  }, [])
+
   const aggregate = useMemo(
     () => round.boards.reduce((total, board) => total + board.outlook, 0),
     [round.boards],
@@ -424,6 +450,8 @@ export function useRound(): RoundController {
     tagBoard: (boardId: number, tag: string | null) => void applyTag(boardId, tag),
     unlockBoard: (boardId: number) => void applyUnlock(boardId),
     tagging,
+    moveBoard: (boardId: number, direction: 1 | -1) => void applyMove(boardId, direction),
+    reordering,
     discard,
     save: () => void save(),
     reload,

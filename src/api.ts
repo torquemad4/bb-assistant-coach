@@ -181,6 +181,14 @@ export async function setBoardTag(boardId: number, tag: string | null): Promise<
   return normalise(await post('/api/tag', { boardId, tag }))
 }
 
+/**
+ * Swaps a board with its neighbour, moving the pairing — tag, scores and
+ * scouting with it — to the next board number along.
+ */
+export async function moveBoard(boardId: number, direction: 1 | -1): Promise<Round> {
+  return normalise(await post('/api/board-order', { boardId, direction }))
+}
+
 /** Reopens a tagged board without changing the tag or the outlook it seeded. */
 export async function unlockBoardTag(boardId: number): Promise<Round> {
   return normalise(await post('/api/tag', { boardId, locked: false }))

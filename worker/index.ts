@@ -30,6 +30,12 @@ const SYNC_MIN_INTERVAL_MS = 8_000
 /** The app renders at most this many boards. */
 const MAX_BOARDS = 8
 
+/**
+ * Where a board's number is parked for the instant a swap takes to run. Outside
+ * the 1-8 range on purpose, so it can never collide with a real board.
+ */
+const PARKING_BOARD_NO = -1
+
 /** The only outlook values the scale allows. */
 const OUTLOOKS = [-1, -0.5, 0, 0.5, 1]
 
@@ -739,6 +745,74 @@ export default {
       await setActive(env.DB, tournamentId!, roundId!)
 
       return json({ ...(await readState(env.DB)), linked: true, imported: matches.length })
+    }
+
+    // ---- POST /api/board-order : move a board along the row ----
+    if (path === '/api/board-order') {
+      if (request.method !== 'POST') return json({ error: `${request.method} not allowed` }, 405)
+      let body: any
+      try {
+        body = await request.json()
+      } catch {
+        return json({ error: 'Body is not valid JSON' }, 400)
+      }
+
+      const active = await resolveActive(env.DB)
+      if (!active) return json({ error: 'No round is set up' }, 404)
+
+      const boardId = Number(body?.boardId)
+      const direction = Number(body?.direction)
+      if (!Number.isInteger(boardId)) return json({ error: 'boardId must be a number' }, 400)
+      if (direction !== 1 && direction !== -1) {
+        return json({ error: 'direction must be 1 (right) or -1 (left)' }, 400)
+      }
+
+      const listed = await env.DB.prepare('SELECT * FROM board WHERE round_id = ? ORDER BY board_no')
+        .bind(active.round.id)
+        .all<BoardRow>()
+      const rows = listed.results ?? []
+      const index = rows.findIndex((row) => row.board_no === boardId)
+      if (index < 0) return json({ error: `No board ${boardId} in this round` }, 404)
+
+      const swapWith = index + direction
+      if (swapWith < 0 || swapWith >= rows.length) {
+        return json({ error: `Board ${boardId} is already at the end of the row` }, 400)
+      }
+
+      const moving = rows[index]
+      const other = rows[swapWith]
+
+      // Three steps rather than two: UNIQUE (round_id, board_no) would reject a
+      // straight swap the moment both rows briefly held the same number.
+      const statements = [
+        env.DB.prepare('UPDATE board SET board_no = ? WHERE id = ?').bind(PARKING_BOARD_NO, moving.id),
+        env.DB.prepare('UPDATE board SET board_no = ? WHERE id = ?').bind(moving.board_no, other.id),
+        env.DB.prepare('UPDATE board SET board_no = ? WHERE id = ?').bind(other.board_no, moving.id),
+      ]
+
+      // Scouting is keyed by board number, so it has to travel with the pairing.
+      // Leaving it behind would put one coach's record under another's name.
+      const scoutRow = await env.DB.prepare('SELECT payload FROM scout WHERE round_id = ?')
+        .bind(active.round.id)
+        .first<{ payload: string }>()
+      if (scoutRow) {
+        const payload = safeParse(scoutRow.payload) as any
+        if (payload && Array.isArray(payload.boards)) {
+          for (const entry of payload.boards) {
+            if (entry?.boardId === moving.board_no) entry.boardId = other.board_no
+            else if (entry?.boardId === other.board_no) entry.boardId = moving.board_no
+          }
+          statements.push(
+            env.DB.prepare('UPDATE scout SET payload = ? WHERE round_id = ?').bind(
+              JSON.stringify(payload),
+              active.round.id,
+            ),
+          )
+        }
+      }
+
+      await env.DB.batch(statements)
+      return json(await readState(env.DB))
     }
 
     // ---- POST /api/sync-mode : follow Tourplay, or go manual ----

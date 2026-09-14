@@ -108,18 +108,45 @@ interface CardProps {
   controller: RoundController
   countryA: CountryCode | null
   countryB: CountryCode | null
+  /** Where this board sits in the row, for the ends of the move arrows. */
+  index: number
+  count: number
 }
 
-function PreMatchCard({ board, scout, controller, countryA, countryB }: CardProps) {
-  const { tagBoard, unlockBoard, tagging, connection } = controller
+function PreMatchCard({ board, scout, controller, countryA, countryB, index, count }: CardProps) {
+  const { tagBoard, unlockBoard, moveBoard, tagging, reordering, isDirty, connection } = controller
   const locked = board.tagLocked
-  const disabled = connection !== 'live' || tagging
+  // Both tagging and reordering write straight through, so both would lose
+  // unsaved match edits to the server's copy. Neither is offered while dirty.
+  const disabled = connection !== 'live' || tagging || reordering || isDirty
   const matchup = scout?.matchup
 
   return (
     <article className={`pm-card${locked ? ' pm-card--locked' : ''}`}>
       <header className="pm-card__head">
-        <span className="pm-card__no">Board {board.id}</span>
+        <span className="pm-order">
+          <button
+            type="button"
+            className="pm-move"
+            onClick={() => moveBoard(board.id, -1)}
+            disabled={disabled || index === 0}
+            aria-label={`Move board ${board.id} left`}
+            title="Move this pairing one board to the left"
+          >
+            ◀
+          </button>
+          <span className="pm-card__no">Board {board.id}</span>
+          <button
+            type="button"
+            className="pm-move"
+            onClick={() => moveBoard(board.id, 1)}
+            disabled={disabled || index === count - 1}
+            aria-label={`Move board ${board.id} right`}
+            title="Move this pairing one board to the right"
+          >
+            ▶
+          </button>
+        </span>
 
         {locked && board.tag ? (
           <span className="pm-card__locked">
@@ -185,7 +212,7 @@ function PreMatchCard({ board, scout, controller, countryA, countryB }: CardProp
 
 /** Tab three: the pre-round read on every board, and where boards get tagged. */
 export function PreMatch(controller: RoundController) {
-  const { round } = controller
+  const { round, isDirty } = controller
   const scout = round.scout
   const byBoard = new Map((scout?.boards ?? []).map((b) => [b.boardId, b]))
 
@@ -195,7 +222,8 @@ export function PreMatch(controller: RoundController) {
         <p className="pm__hint">
           Tag each board before the round starts. <strong>Swing</strong> opens at −0.5,{' '}
           <strong>Anchor</strong> at 0, <strong>Bonus</strong> at +0.5. Tagging locks the board;
-          unlocking is deliberate.
+          unlocking is deliberate. The arrows move a pairing along the row — coaches, tag and
+          scouting travel with it.
         </p>
         <span className="pm__scouted">
           {scout
@@ -209,6 +237,13 @@ export function PreMatch(controller: RoundController) {
         </span>
       </div>
 
+      {isDirty && (
+        <p className="pm__blocked">
+          Unsaved match edits on the control tab. Save or discard them before tagging or
+          reordering — both write straight to the database and would take the saved scores back.
+        </p>
+      )}
+
       {!scout && (
         <p className="pm__empty">
           NAF Scout has not delivered scouting for this round. Boards can still be tagged — every
@@ -217,7 +252,7 @@ export function PreMatch(controller: RoundController) {
       )}
 
       <div className="pm__grid">
-        {round.boards.map((board) => (
+        {round.boards.map((board, index) => (
           <PreMatchCard
             key={board.id}
             board={board}
@@ -225,6 +260,8 @@ export function PreMatch(controller: RoundController) {
             controller={controller}
             countryA={round.teamA.country}
             countryB={round.teamB.country}
+            index={index}
+            count={round.boards.length}
           />
         ))}
       </div>

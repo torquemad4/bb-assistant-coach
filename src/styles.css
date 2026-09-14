@@ -1774,6 +1774,17 @@ h1 {
   line-height: 1.45;
 }
 
+.pm__blocked {
+  margin: 0;
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--pending-soft);
+  border: 1px solid var(--pending);
+  color: var(--ink);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
 /* Wider than the dashboard's eight columns on purpose: ten stat rows per board
    cannot be read at 140px. This view is used sitting down before the round, not
    glanced at across a hall. */
@@ -1803,8 +1814,11 @@ h1 {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  padding: 7px 9px;
+  /* Wraps rather than clips: the arrows and three tag buttons together are
+     wider than a narrow card, and a half-cut Bonus button is unusable. */
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 7px 8px;
   background: var(--bg-sunken);
   border-bottom: 1px solid var(--line-soft);
 }
@@ -1816,6 +1830,38 @@ h1 {
   text-transform: uppercase;
   color: var(--ink-faint);
   white-space: nowrap;
+}
+
+/* The board number and its two move arrows read as one control: the number is
+   the thing being moved, so the arrows sit either side of it rather than in a
+   pair at one end. */
+.pm-order {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.pm-move {
+  min-width: 26px;
+  min-height: 26px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--bg-raised);
+  color: var(--ink-dim);
+  font-size: 0.6rem;
+  line-height: 1;
+}
+
+.pm-move:hover:not(:disabled) {
+  color: var(--ink);
+  border-color: var(--ink-faint);
+}
+
+.pm-move:disabled {
+  color: var(--ink-disabled);
+  border-color: var(--line-soft);
+  cursor: default;
 }
 
 .pm-card__locked {
@@ -1831,7 +1877,7 @@ h1 {
 
 .pm-tag-btn {
   min-height: 30px;
-  padding: 0 8px;
+  padding: 0 7px;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   background: var(--bg-raised);
