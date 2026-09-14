@@ -1863,6 +1863,17 @@ h1 {
   cursor: default;
 }
 
+.pm__note {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--level-soft);
+  border: 1px solid var(--line);
+  color: var(--ink-dim);
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
 .pm__error {
   margin: 0;
   padding: 9px 12px;

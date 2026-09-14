@@ -204,10 +204,19 @@ export interface ScoutSkip {
   reason: string
 }
 
+/** How the Eurobowl race matrix fared on the last pull. */
+export interface MatchupReport {
+  source: string | null
+  fetchedAt: string | null
+  stale: boolean
+  error: string | null
+}
+
 export interface ScoutRefresh {
   round: Round
   scouted: number
   skipped: ScoutSkip[]
+  matchups: MatchupReport | null
 }
 
 /**
@@ -240,6 +249,7 @@ export async function refreshScouting(opts: { resolveByName?: boolean; scope?: s
     round: normalise(payload),
     scouted: payload.refresh?.scouted ?? 0,
     skipped: payload.refresh?.skipped ?? [],
+    matchups: payload.refresh?.matchups ?? null,
   }
 }
 

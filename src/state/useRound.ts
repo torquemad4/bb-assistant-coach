@@ -16,6 +16,7 @@ import {
   toSaveBoard,
   type EnginePing,
   type LinkPreview,
+  type MatchupReport,
   type ScoutSkip,
 } from '../api'
 import { SEED_ROUND } from '../data/round'
@@ -102,6 +103,8 @@ export interface RoundController {
   /** Seats the last pull could not scout. Empty after a clean pull. */
   scoutSkipped: ScoutSkip[]
   scoutedCount: number | null
+  /** How the Eurobowl race matrix fared on the last pull. */
+  matchupReport: MatchupReport | null
   /** Result of the last engine test, so a wholesale failure can be placed. */
   enginePing: EnginePing | null
   pingEngine: () => void
@@ -164,6 +167,7 @@ export function useRound(): RoundController {
   const [scoutError, setScoutError] = useState<string | null>(null)
   const [scoutSkipped, setScoutSkipped] = useState<ScoutSkip[]>([])
   const [scoutedCount, setScoutedCount] = useState<number | null>(null)
+  const [matchupReport, setMatchupReport] = useState<MatchupReport | null>(null)
   const [enginePing, setEnginePing] = useState<EnginePing | null>(null)
   const [pinging, setPinging] = useState(false)
 
@@ -463,6 +467,7 @@ export function useRound(): RoundController {
       setBaseline((current) => ({ ...current, scout: result.round.scout }))
       setScoutSkipped(result.skipped)
       setScoutedCount(result.scouted)
+      setMatchupReport(result.matchups)
     } catch (cause) {
       setScoutError(cause instanceof Error ? cause.message : String(cause))
       const skipped = (cause as { skipped?: ScoutSkip[] })?.skipped
@@ -530,6 +535,7 @@ export function useRound(): RoundController {
     scoutError,
     scoutSkipped,
     scoutedCount,
+    matchupReport,
     enginePing,
     pingEngine: () => void applyPing(),
     pinging,

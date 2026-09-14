@@ -16,6 +16,8 @@
  * and the racial matchup, so both are left empty and render as em dashes.
  */
 
+import { matchupKey, type MatchupTable } from './matchups'
+
 /**
  * Where the engine lives when the environment does not say otherwise.
  *
@@ -130,7 +132,7 @@ export interface ScoutPullResult {
     generatedAt: string
     vs200Basis: string
     dataDate: string | null
-    boards: { boardId: number; a: ScoutCoach | null; b: ScoutCoach | null; matchup: null }[]
+    boards: { boardId: number; a: ScoutCoach | null; b: ScoutCoach | null; matchup: unknown }[]
   }
   scouted: number
   skipped: ScoutSkip[]
@@ -139,6 +141,8 @@ export interface ScoutPullResult {
 export interface ScoutOptions {
   base?: string
   scope?: string
+  /** Eurobowl race-versus-race table, when one could be loaded. */
+  matchups?: MatchupTable
   /**
    * Look a missing NAF number up from the coach's NAF name. Off by default: a
    * name match that picks the wrong coach attaches someone else's whole record
@@ -407,14 +411,12 @@ export async function pullScouting(
   const scoutBoards: ScoutPullResult['round']['boards'] = []
   for (const board of boards) {
     const [a, b] = await Promise.all([one(board, 'a'), one(board, 'b')])
-    scoutBoards.push({
-      boardId: board.id,
-      a,
-      b,
-      // The engine has no global race-versus-race endpoint; its matchup grid is
-      // one coach's own races, which is a different question.
-      matchup: null,
-    })
+    // Always from the home side's point of view, which is team A — England at
+    // the Euros. The NAF Scout engine has no global race matrix of its own; the
+    // Eurobowl-tagged one comes from `matchups.ts`.
+    const matchup = options.matchups?.[matchupKey(board.a.race, board.b.race)] ?? null
+
+    scoutBoards.push({ boardId: board.id, a, b, matchup })
   }
 
   return {

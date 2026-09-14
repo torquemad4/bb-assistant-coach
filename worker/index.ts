@@ -19,6 +19,7 @@
 
 import { fetchLiveRound, fetchTournament, type LiveMatch } from './tourplay'
 import { pingEngine, pullScouting } from './scout'
+import { fetchMatchups, MATCHUP_MAX_AGE_MS, type MatchupPayload } from './matchups'
 
 export interface Env {
   DB: D1Database
@@ -389,6 +390,47 @@ function syncStatements(env: Env, matches: LiveMatch[], boards: BoardRow[]) {
   return statements
 }
 
+/**
+ * The Eurobowl race matrix, from cache when it is fresh enough.
+ *
+ * Deliberately total: a community site being down, slow or reshaped must never
+ * fail a scouting pull. Stale beats absent, and absent beats broken — the view
+ * renders a missing matchup as an em dash either way.
+ */
+async function loadMatchups(
+  db: D1Database,
+): Promise<{ payload: MatchupPayload | null; error: string | null; stale: boolean }> {
+  const cached = await db
+    .prepare('SELECT payload, fetched_at FROM matchup_cache WHERE id = 1')
+    .first<{ payload: string; fetched_at: string }>()
+
+  const age = cached ? Date.now() - Date.parse(cached.fetched_at) : Infinity
+  if (cached && Number.isFinite(age) && age < MATCHUP_MAX_AGE_MS) {
+    return { payload: safeParse(cached.payload) as MatchupPayload, error: null, stale: false }
+  }
+
+  try {
+    const fresh = await fetchMatchups()
+    await db
+      .prepare(
+        `INSERT INTO matchup_cache (id, payload, fetched_at) VALUES (1, ?, ?)
+           ON CONFLICT(id) DO UPDATE SET payload = excluded.payload, fetched_at = excluded.fetched_at`,
+      )
+      .bind(JSON.stringify(fresh), fresh.fetchedAt)
+      .run()
+    return { payload: fresh, error: null, stale: false }
+  } catch (cause) {
+    // Fall back to whatever was last stored, however old — but never silently.
+    // A missing matchup that nobody can explain is how a wrong address passed
+    // for a dead service once already.
+    return {
+      payload: cached ? (safeParse(cached.payload) as MatchupPayload) : null,
+      error: cause instanceof Error ? cause.message : String(cause),
+      stale: cached != null,
+    }
+  }
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url)
@@ -557,6 +599,8 @@ export default {
       const rows = boards.results ?? []
       if (rows.length === 0) return json({ error: 'This round has no boards to scout' }, 400)
 
+      const matchups = await loadMatchups(env.DB)
+
       let result
       try {
         result = await pullScouting(
@@ -579,6 +623,7 @@ export default {
             base: env.SCOUT_API_URL,
             scope: url.searchParams.get('scope') ?? undefined,
             resolveByName: url.searchParams.get('resolve') === 'name',
+            matchups: matchups.payload?.table,
           },
         )
       } catch (cause) {
@@ -611,7 +656,19 @@ export default {
         .run()
 
       const state = await readState(env.DB)
-      return json({ ...state, refresh: { scouted: result.scouted, skipped: result.skipped } })
+      return json({
+        ...state,
+        refresh: {
+          scouted: result.scouted,
+          skipped: result.skipped,
+          matchups: {
+            source: matchups.payload?.source ?? null,
+            fetchedAt: matchups.payload?.fetchedAt ?? null,
+            stale: matchups.stale,
+            error: matchups.error,
+          },
+        },
+      })
     }
 
     // ---- PUT /api/scout : NAF Scout delivers a round's scouting ----

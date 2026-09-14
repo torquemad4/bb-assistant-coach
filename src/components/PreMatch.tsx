@@ -226,6 +226,7 @@ export function PreMatch(controller: RoundController) {
     enginePing,
     pingEngine,
     pinging,
+    matchupReport,
     connection,
   } = controller
   const scout = round.scout
@@ -284,6 +285,15 @@ export function PreMatch(controller: RoundController) {
         <p className="pm__blocked">
           Unsaved match edits on the control tab. Save or discard them before tagging or
           reordering — both write straight to the database and would take the saved scores back.
+        </p>
+      )}
+
+      {matchupReport?.error && (
+        <p className="pm__note">
+          <strong>Race matchups unavailable.</strong> {matchupReport.error}
+          {matchupReport.stale
+            ? ' — showing the last set that was fetched.'
+            : ' — the figure between each pair of coaches will show as a dash.'}
         </p>
       )}
 
