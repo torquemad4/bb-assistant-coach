@@ -20,7 +20,9 @@
  * alike.
  *
  * THE ENGINE: a FastAPI service over the official NAF database dump, hosted at
- * https://bb-county-app.azurewebsites.net and shared with the England BB site.
+ * bb-county-app-euebajf9c8bnfqb0.ukwest-01.azurewebsites.net and shared with the
+ * England BB site. (The short `bb-county-app.azurewebsites.net` in that repo's
+ * DEPLOY_AZURE.md does not resolve.)
  * Source in `torquemad4/bb-county-tool`; its own docs at `{base}/docs`. It also
  * powers the county tool, so it is not this app's to break.
  *

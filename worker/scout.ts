@@ -16,8 +16,17 @@
  * and the racial matchup, so both are left empty and render as em dashes.
  */
 
-/** Where the engine lives when the environment does not say otherwise. */
-const DEFAULT_BASE = 'https://bb-county-app.azurewebsites.net'
+/**
+ * Where the engine lives when the environment does not say otherwise.
+ *
+ * The full App Service hostname, regional suffix and all. `DEPLOY_AZURE.md` in
+ * bb-county-tool talks about `bb-county-app.azurewebsites.net`, but that name
+ * does not resolve — taking it from there cost a round of "HTTP 530, error 1016"
+ * (Cloudflare for "origin DNS failure"), which reads like a dead service rather
+ * than a wrong address. The deployed URL is the one in `DEPLOY_UI.md`.
+ */
+const DEFAULT_BASE =
+  'https://bb-county-app-euebajf9c8bnfqb0.ukwest-01.azurewebsites.net'
 
 /**
  * Peak-ELO threshold for an opponent to count as "established".
