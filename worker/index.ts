@@ -19,7 +19,7 @@
 
 import { fetchLiveRound, fetchTournament, type LiveMatch } from './tourplay'
 import { pingEngine, pullScouting } from './scout'
-import { fetchMatchups, MATCHUP_MAX_AGE_MS, type MatchupPayload } from './matchups'
+import { fetchMatchups, tableFromSnapshot, MATCHUP_MAX_AGE_MS, type MatchupPayload } from './matchups'
 
 export interface Env {
   DB: D1Database
@@ -398,8 +398,9 @@ function syncStatements(env: Env, matches: LiveMatch[], boards: BoardRow[]) {
  * renders a missing matchup as an em dash either way.
  */
 async function loadMatchups(
-  db: D1Database,
+  env: Env,
 ): Promise<{ payload: MatchupPayload | null; error: string | null; stale: boolean }> {
+  const db = env.DB
   const cached = await db
     .prepare('SELECT payload, fetched_at FROM matchup_cache WHERE id = 1')
     .first<{ payload: string; fetched_at: string }>()
@@ -420,14 +421,28 @@ async function loadMatchups(
       .run()
     return { payload: fresh, error: null, stale: false }
   } catch (cause) {
-    // Fall back to whatever was last stored, however old — but never silently.
-    // A missing matchup that nobody can explain is how a wrong address passed
-    // for a dead service once already.
-    return {
-      payload: cached ? (safeParse(cached.payload) as MatchupPayload) : null,
-      error: cause instanceof Error ? cause.message : String(cause),
-      stale: cached != null,
+    const error = cause instanceof Error ? cause.message : String(cause)
+
+    // Whatever was last stored, however old, beats nothing.
+    if (cached) {
+      return { payload: safeParse(cached.payload) as MatchupPayload, error, stale: true }
     }
+
+    // Then the snapshot that ships with the app. This is the normal path today:
+    // BBTV omits its TLS intermediate and Cloudflare refuses the chain (526).
+    try {
+      const file = await env.ASSETS.fetch(new Request('https://assets/data/eb-matchups.json'))
+      if (file.ok) {
+        const snapshot = tableFromSnapshot(await file.json())
+        if (snapshot) return { payload: snapshot, error, stale: true }
+      }
+    } catch {
+      /* the snapshot is the last resort; there is nothing after it */
+    }
+
+    // Never silently: a missing figure nobody can explain is how a wrong
+    // address passed for a dead service once already.
+    return { payload: null, error, stale: false }
   }
 }
 
@@ -599,7 +614,7 @@ export default {
       const rows = boards.results ?? []
       if (rows.length === 0) return json({ error: 'This round has no boards to scout' }, 400)
 
-      const matchups = await loadMatchups(env.DB)
+      const matchups = await loadMatchups(env)
 
       let result
       try {

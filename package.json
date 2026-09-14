@@ -12,7 +12,8 @@
     "deploy": "npm run build && wrangler deploy",
     "cf-login": "wrangler login",
     "db:migrate": "wrangler d1 migrations apply bb-coordinator --remote",
-    "tourplay": "node scripts/fetch-tourplay.mjs"
+    "tourplay": "node scripts/fetch-tourplay.mjs",
+    "eb-matchups": "node scripts/fetch-eb-matchups.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",

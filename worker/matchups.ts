@@ -12,10 +12,14 @@
  *
  *   - ONE request fetches all 961 matchups, never one per board
  *   - the result is cached in D1 and only re-fetched when stale
- *   - any failure falls back to the cached copy, and failing that to no
- *     matchup at all, which the view already renders as an em dash
+ *   - any failure falls back to the cached copy, then to a snapshot bundled
+ *     with the app, and only then to nothing
  *
- * Nothing about scouting depends on it being up.
+ * Nothing about scouting depends on it being up. As of 14 Sep 2026 it cannot
+ * be reached from a Worker at all: BBTV does not serve its TLS intermediate,
+ * and Cloudflare rejects the chain with HTTP 526 rather than chasing it the way
+ * a browser does. So the bundled snapshot is not a fallback in practice, it is
+ * the live path — until whoever runs the site installs the full chain.
  */
 
 const BBTV_URL = 'https://bbtv.akorus.de/_dash-update-component'
@@ -75,6 +79,47 @@ export interface MatchupPayload {
   source: string
   fetchedAt: string
   table: MatchupTable
+}
+
+/**
+ * The bundled snapshot's shape: races named once, matchups as index tuples.
+ * 961 rows of objects is 136 KB and this is 22, which matters when it ships
+ * with the app. Written by `scripts/fetch-eb-matchups.mjs`.
+ */
+interface SnapshotDoc {
+  source: string
+  sourceUrl?: string
+  capturedAt: string
+  races: string[]
+  /** [homeRaceIndex, awayRaceIndex, wins, draws, losses, games, winRate] */
+  rows: [number, number, number, number, number, number, number | null][]
+}
+
+/** Expands the bundled snapshot into the same table a live fetch produces. */
+export function tableFromSnapshot(doc: unknown): MatchupPayload | null {
+  const d = doc as SnapshotDoc
+  if (!d || !Array.isArray(d.races) || !Array.isArray(d.rows)) return null
+
+  const table: MatchupTable = {}
+  for (const [ai, bi, w, dr, l, games, winRate] of d.rows) {
+    const homeRace = d.races[ai]
+    const awayRace = d.races[bi]
+    if (!homeRace || !awayRace) continue
+    table[matchupKey(homeRace, awayRace)] = {
+      homeRace,
+      awayRace,
+      winRate: winRate ?? null,
+      record: { w, d: dr, l, winRate: winRate ?? null },
+      games,
+    }
+  }
+  if (Object.keys(table).length === 0) return null
+
+  return {
+    source: `${d.source} (snapshot, ${d.capturedAt})`,
+    fetchedAt: d.capturedAt,
+    table,
+  }
 }
 
 /** "54.0%" as 54. Null when the site sends something unexpected. */

@@ -290,10 +290,17 @@ export function PreMatch(controller: RoundController) {
 
       {matchupReport?.error && (
         <p className="pm__note">
-          <strong>Race matchups unavailable.</strong> {matchupReport.error}
-          {matchupReport.stale
-            ? ' — showing the last set that was fetched.'
-            : ' — the figure between each pair of coaches will show as a dash.'}
+          {matchupReport.source ? (
+            <>
+              <strong>Race matchups from {matchupReport.source}.</strong> The live source could not
+              be read ({matchupReport.error}), so these figures are not today's.
+            </>
+          ) : (
+            <>
+              <strong>Race matchups unavailable.</strong> {matchupReport.error} — the figure between
+              each pair of coaches shows as a dash.
+            </>
+          )}
         </p>
       )}
 
