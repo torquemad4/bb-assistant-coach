@@ -45,9 +45,12 @@ function Stat({ label, record }: StatProps) {
 }
 
 function Form({ games }: { games: ScoutFormGame[] | undefined }) {
-  if (!games || games.length === 0) {
-    return <div className="pm-form pm-form--empty">No recent games</div>
-  }
+  // No strip at all rather than a line saying there is no strip. The engine has
+  // no last-N-games endpoint yet, so this is every coach on every board, and on
+  // a tablet sixteen dead lines are sixteen lines of a card that had to scroll.
+  // An absent strip claims nothing; the scouted line already says where the
+  // figures came from.
+  if (!games || games.length === 0) return null
   return (
     <div className="pm-form" aria-label="Recent form, most recent first">
       {games.slice(0, 10).map((g, i) => (
@@ -135,7 +138,7 @@ function PreMatchCard({ board, scout, controller, countryA, countryB, index, cou
           >
             ◀
           </button>
-          <span className="pm-card__no">Board {board.id}</span>
+          <span className="pm-card__no">B{board.id}</span>
           <button
             type="button"
             className="pm-move"
