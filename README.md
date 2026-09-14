@@ -191,6 +191,40 @@ anything — it is what stops a red England column reading as a losing table.
 Flags are inline SVG in `src/components/Flag.tsx`; adding a nation means adding a
 case there and a member to `CountryCode`.
 
+## Pre-match
+
+A third tab, between the dashboard and match control. One card per board showing
+both coaches with, for each: NAF rating with the race they are playing against
+their best rating; record and win rate with that race; the same against 200+
+opponents; against the opponent's race; against the opponent's race at 200+; and
+a ten-game form strip. Between the two coaches sits the racial matchup's own win
+rate under Euro rules, from the home side's point of view.
+
+The grid is wider than the dashboard's eight columns on purpose — ten stat rows
+per board cannot be read at 140px, and this view is used sitting down before the
+round rather than glanced at across a hall.
+
+**None of these figures are computed here.** They are delivered by **NAF Scout**,
+which pre-crunches them. The contract is `src/scout.ts` — that file is the
+agreement, and it documents which NAF endpoints the underlying data comes from.
+Deliver a round's scouting with `PUT /api/scout`; remove it with `DELETE`.
+
+Every figure is optional. A missing one renders as an em dash, never a zero: at a
+tournament, "no data" and "played none, won none" must not look alike. A record
+drawn from fewer than five games is marked with an asterisk.
+
+### Tagging
+
+Each board is a **Swing**, an **Anchor** or a **Bonus**, which seeds its outlook
+to −0.5, 0 and +0.5 respectively. Tagging writes through immediately rather than
+becoming unsaved work — it is a decision about the round, not a score being
+nudged — and it **locks** that board's pre-match card. Unlocking is a separate,
+deliberate act that reopens the card without disturbing the tag or the outlook it
+seeded. Tags appear on the dashboard cards once set.
+
+One ordering rule: a board already at **FT** keeps its result-derived outlook when
+tagged. Full time has settled it, and a tag must not undo that.
+
 ## Tournaments, rounds and boards
 
 A **tournament** holds **rounds**; a round holds **boards**. Which tournament and

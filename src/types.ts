@@ -1,3 +1,5 @@
+import type { ScoutRound } from './scout'
+
 /**
  * Domain model for a round of team Blood Bowl.
  *
@@ -23,6 +25,18 @@ export type Kickoff = 'K' | 'R' | null
 
 /** A finished match, from the home side's point of view. */
 export type Result = 'W' | 'D' | 'L'
+
+/**
+ * What a board is worth to the round plan, decided before it starts. Each seeds
+ * the board's outlook.
+ */
+export type Tag = 'swing' | 'anchor' | 'bonus'
+
+export const TAGS: readonly Tag[] = ['swing', 'anchor', 'bonus']
+
+export const TAG_OUTLOOK: Record<Tag, Outlook> = { swing: -0.5, anchor: 0, bonus: 0.5 }
+
+export const TAG_LABEL: Record<Tag, string> = { swing: 'Swing', anchor: 'Anchor', bonus: 'Bonus' }
 
 /**
  * A coach's read on how a match is trending, stepped in 0.5 increments and
@@ -82,6 +96,10 @@ export interface Board {
   period: Period
   /** Whether the home side kicked or received. */
   kickoff: Kickoff
+  /** Swing, Anchor or Bonus. Null until the board is tagged. */
+  tag: Tag | null
+  /** Tagging locks the board's pre-match view; unlocking is a separate act. */
+  tagLocked: boolean
   /** Assistant coach's read on the match. Always locally owned, never fed. */
   outlook: Outlook
 }
@@ -111,6 +129,8 @@ export interface RoundSummary {
 }
 
 export interface Round {
+  /** Scouting for this round, as delivered by NAF Scout. Null until it arrives. */
+  scout: ScoutRound | null
   /** Every tournament, for the selector. */
   tournaments: TournamentSummary[]
   activeTournamentId: number

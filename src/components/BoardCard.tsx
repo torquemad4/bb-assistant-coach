@@ -1,7 +1,7 @@
 import { RACE_TAG, type Race } from '../data/races'
 import { signed, toneOf } from '../format'
 import { Flag } from './Flag'
-import { resultOf, type Board, type CountryCode, type Side } from '../types'
+import { TAG_LABEL, resultOf, type Board, type CountryCode, type Side } from '../types'
 
 function raceTag(race: string): string {
   return RACE_TAG[race as Race] ?? race.slice(0, 4).toUpperCase()
@@ -57,6 +57,7 @@ export function BoardCard({ board, countryA, countryB }: BoardCardProps) {
       <article className="board board--ft" aria-label={`Board ${board.id}, full time`}>
         <header className="board__head">
           <span className="board__number">Board {board.id}</span>
+          {board.tag && <span className={`tag tag--${board.tag}`}>{TAG_LABEL[board.tag]}</span>}
           <span className="pill pill--ft">FT</span>
         </header>
         <div className={`ft ft--${result.toLowerCase()}`} aria-label={`Result ${result}`}>
@@ -70,6 +71,7 @@ export function BoardCard({ board, countryA, countryB }: BoardCardProps) {
     <article className="board" aria-label={`Board ${board.id}`}>
       <header className="board__head">
         <span className="board__number">Board {board.id}</span>
+        {board.tag && <span className={`tag tag--${board.tag}`}>{TAG_LABEL[board.tag]}</span>}
         <span className={`pill pill--half pill--half-${board.period}`}>
           {board.period === '1' ? '1st' : '2nd'} Half
         </span>

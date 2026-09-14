@@ -14,6 +14,7 @@ import type { Round } from '../types'
  * own them later. `nafNumber` stays null until a real NAF lookup fills it in.
  */
 export const SEED_ROUND: Round = {
+  scout: null,
   // The offline fallback is a single unnamed tournament; the selectors have
   // nothing to switch between when the database cannot be reached.
   tournaments: [{ id: 1, name: 'England v Italy', slug: null, syncEnabled: false }],
@@ -32,6 +33,8 @@ export const SEED_ROUND: Round = {
       b: { nafName: 'Menzogna', nafNumber: null, race: 'Necromantic Horror', score: 2, injuries: 2 },
       period: '1',
       kickoff: null,
+      tag: null,
+      tagLocked: false,
       outlook: -0.5,
     },
     {
@@ -41,6 +44,8 @@ export const SEED_ROUND: Round = {
       b: { nafName: 'Serafino', nafNumber: null, race: 'Black Orc', score: 1, injuries: 0 },
       period: '1',
       kickoff: null,
+      tag: null,
+      tagLocked: false,
       outlook: -0.5,
     },
     {
@@ -50,6 +55,8 @@ export const SEED_ROUND: Round = {
       b: { nafName: 'Barbossa', nafNumber: null, race: 'Norse', score: 0, injuries: 1 },
       period: '2',
       kickoff: null,
+      tag: null,
+      tagLocked: false,
       outlook: 1,
     },
     {
@@ -59,6 +66,8 @@ export const SEED_ROUND: Round = {
       b: { nafName: 'Dirold', nafNumber: null, race: 'Khorne', score: 0, injuries: 2 },
       period: '1',
       kickoff: null,
+      tag: null,
+      tagLocked: false,
       outlook: 0,
     },
     {
@@ -68,6 +77,8 @@ export const SEED_ROUND: Round = {
       b: { nafName: 'Liam', nafNumber: null, race: 'Elven Union', score: 1, injuries: 2 },
       period: '2',
       kickoff: null,
+      tag: null,
+      tagLocked: false,
       outlook: 0.5,
     },
     {
@@ -77,6 +88,8 @@ export const SEED_ROUND: Round = {
       b: { nafName: 'Diomlord', nafNumber: null, race: 'Dwarf', score: 2, injuries: 2 },
       period: '2',
       kickoff: null,
+      tag: null,
+      tagLocked: false,
       outlook: 0,
     },
     {
@@ -86,6 +99,8 @@ export const SEED_ROUND: Round = {
       b: { nafName: 'Yena', nafNumber: null, race: 'Tomb Kings', score: 0, injuries: 2 },
       period: '1',
       kickoff: null,
+      tag: null,
+      tagLocked: false,
       outlook: 0.5,
     },
     {
@@ -95,6 +110,8 @@ export const SEED_ROUND: Round = {
       b: { nafName: 'PanicoBlack', nafNumber: null, race: 'Chaos Chosen', score: 3, injuries: 1 },
       period: '2',
       kickoff: null,
+      tag: null,
+      tagLocked: false,
       outlook: -1,
     },
   ],

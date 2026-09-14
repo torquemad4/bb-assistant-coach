@@ -1,14 +1,16 @@
 import { useState } from 'react'
 import { ControlPanel } from './components/ControlPanel'
 import { Dashboard } from './components/Dashboard'
+import { PreMatch } from './components/PreMatch'
 import { Selectors } from './components/Selectors'
 import { ThemeToggle } from './components/ThemeToggle'
 import { useRound } from './state/useRound'
 
-type Tab = 'dashboard' | 'control'
+type Tab = 'dashboard' | 'prematch' | 'control'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'dashboard', label: 'Dashboard' },
+  { id: 'prematch', label: 'Pre-Match' },
   { id: 'control', label: 'Match Control' },
 ]
 
@@ -68,7 +70,9 @@ export default function App() {
       )}
 
       <main className="stage">
-        {tab === 'dashboard' ? <Dashboard {...controller} /> : <ControlPanel {...controller} />}
+        {tab === 'dashboard' && <Dashboard {...controller} />}
+        {tab === 'prematch' && <PreMatch {...controller} />}
+        {tab === 'control' && <ControlPanel {...controller} />}
       </main>
     </div>
   )

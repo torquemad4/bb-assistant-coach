@@ -1693,3 +1693,356 @@ h1 {
   font-size: 0.95rem;
   line-height: 1;
 }
+
+/* ---------- board tags ---------- */
+
+.tag {
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* A Swing is the board the round turns on, so it carries the most weight. */
+.tag--swing {
+  background: var(--pending-soft);
+  color: var(--pending);
+}
+
+.tag--anchor {
+  background: var(--level-soft);
+  color: var(--ink-dim);
+}
+
+.tag--bonus {
+  background: var(--up-soft);
+  color: var(--up);
+}
+
+.board__head {
+  gap: 6px;
+}
+
+/* ---------- pre-match ---------- */
+
+.pm {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+  min-height: 0;
+}
+
+.pm__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 9px 14px;
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.pm__hint {
+  margin: 0;
+  flex: 1;
+  min-width: 240px;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--ink-dim);
+}
+
+.pm__scouted {
+  font-size: 0.72rem;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.pm__empty {
+  margin: 0;
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--level-soft);
+  border: 1px solid var(--line);
+  color: var(--ink-dim);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+/* Wider than the dashboard's eight columns on purpose: ten stat rows per board
+   cannot be read at 140px. This view is used sitting down before the round, not
+   glanced at across a hall. */
+.pm__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(248px, 1fr));
+  gap: 10px;
+  align-content: start;
+  overflow-y: auto;
+  padding-bottom: 4px;
+}
+
+.pm-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.pm-card--locked {
+  border-color: var(--ink-faint);
+}
+
+.pm-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 9px;
+  background: var(--bg-sunken);
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.pm-card__no {
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  white-space: nowrap;
+}
+
+.pm-card__locked {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pm-tags {
+  display: flex;
+  gap: 3px;
+}
+
+.pm-tag-btn {
+  min-height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--bg-raised);
+  color: var(--ink-dim);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.pm-tag-btn:hover:not(:disabled) {
+  color: var(--ink);
+  border-color: var(--ink-faint);
+}
+
+.pm-tag-btn.is-active {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--bg);
+}
+
+.pm-tag-btn:disabled {
+  color: var(--ink-disabled);
+  cursor: default;
+}
+
+.pm-unlock {
+  min-height: 26px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--bg-raised);
+  color: var(--ink-faint);
+  font-size: 0.62rem;
+  font-weight: 700;
+}
+
+.pm-unlock:hover:not(:disabled) {
+  color: var(--ink);
+}
+
+.pm-coach {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 8px 9px;
+}
+
+.pm-coach--a {
+  border-left: 3px solid var(--team-a);
+}
+
+.pm-coach--b {
+  border-left: 3px solid var(--team-b);
+}
+
+.pm-coach__head {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  margin-bottom: 2px;
+}
+
+.pm-coach__name {
+  font-size: 0.84rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pm-coach__race {
+  margin-left: auto;
+  font-size: 0.65rem;
+  color: var(--ink-faint);
+  white-space: nowrap;
+}
+
+.pm-rating {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  padding-bottom: 4px;
+  margin-bottom: 2px;
+  border-bottom: 1px solid var(--line-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.pm-rating__value {
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.pm-rating__sep,
+.pm-rating__max {
+  color: var(--ink-faint);
+  font-size: 0.82rem;
+}
+
+.pm-rating__note {
+  margin-left: auto;
+  font-size: 0.6rem;
+  color: var(--ink-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pm-stat {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: baseline;
+  gap: 7px;
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.pm-stat--empty {
+  color: var(--ink-faint);
+}
+
+.pm-stat__label {
+  color: var(--ink-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pm-stat__record {
+  color: var(--ink-faint);
+}
+
+.pm-stat__rate {
+  min-width: 46px;
+  text-align: right;
+  font-weight: 700;
+}
+
+.pm-stat__thin {
+  color: var(--pending);
+  font-weight: 800;
+}
+
+.pm-form {
+  display: flex;
+  gap: 2px;
+  margin-top: 5px;
+}
+
+.pm-form--empty {
+  font-size: 0.65rem;
+  color: var(--ink-faint);
+}
+
+.pm-pip {
+  flex: 1;
+  min-width: 0;
+  padding: 2px 0;
+  border-radius: 3px;
+  font-size: 0.55rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.pm-pip--w {
+  background: var(--up);
+  color: var(--on-up);
+}
+
+.pm-pip--d {
+  background: var(--level);
+  color: var(--on-level);
+}
+
+.pm-pip--l {
+  background: var(--down);
+  color: var(--on-down);
+}
+
+/* The matchup band sits between the two coaches — it belongs to neither. */
+.pm-matchup {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 6px 9px;
+  background: var(--bg-sunken);
+  border-top: 1px solid var(--line-soft);
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.pm-matchup__races {
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--ink-dim);
+}
+
+.pm-matchup__races em {
+  font-style: normal;
+  color: var(--ink-faint);
+  font-weight: 600;
+}
+
+.pm-matchup__rate {
+  margin-left: auto;
+  font-size: 0.95rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.pm-matchup__note {
+  font-size: 0.58rem;
+  color: var(--ink-faint);
+  white-space: nowrap;
+}

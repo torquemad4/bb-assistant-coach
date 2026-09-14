@@ -78,6 +78,8 @@ interface BoardRow {
   kickoff: string | null
   outlook: number
   tourplay_match_id: string | null
+  tag: string | null
+  tag_locked: number
 }
 
 function json(body: unknown, status = 200): Response {
@@ -114,8 +116,14 @@ function boardFromRow(row: BoardRow) {
     period: row.period,
     kickoff: row.kickoff,
     outlook: row.outlook,
+    tag: row.tag,
+    tagLocked: row.tag_locked === 1,
   }
 }
+
+/** What each tag seeds a board's outlook to. */
+const TAG_OUTLOOK: Record<string, number> = { swing: -0.5, anchor: 0, bonus: 0.5 }
+const TAGS = Object.keys(TAG_OUTLOOK)
 
 interface Active {
   tournament: TournamentRow
@@ -179,6 +187,11 @@ async function readState(db: D1Database) {
   if (!active) return null
   const { tournament, round } = active
 
+  const scout = await db
+    .prepare('SELECT payload, generated_at FROM scout WHERE round_id = ?')
+    .bind(round.id)
+    .first<{ payload: string; generated_at: string | null }>()
+
   const [tournaments, rounds, boards] = await db.batch<any>([
     db.prepare('SELECT id, name, tourplay_slug, sync_enabled FROM tournament ORDER BY id'),
     db
@@ -203,6 +216,9 @@ async function readState(db: D1Database) {
     teamA: { name: tournament.team_a_name, country: tournament.team_a_country },
     teamB: { name: tournament.team_b_name, country: tournament.team_b_country },
     boards: (boards.results as BoardRow[]).map(boardFromRow),
+    // Parsed here so a corrupt blob fails once, on the server, rather than
+    // throwing inside every viewer's render.
+    scout: scout ? safeParse(scout.payload) : null,
     updatedAt: round.updated_at,
     tourplay: {
       slug: tournament.tourplay_slug,
@@ -229,6 +245,14 @@ function teamsFromName(name: string): { a: string; b: string; aCountry: string; 
     b: b || 'Away',
     aCountry: FLAGS[a.toLowerCase()] ?? '',
     bCountry: FLAGS[b.toLowerCase()] ?? '',
+  }
+}
+
+function safeParse(raw: string): unknown {
+  try {
+    return JSON.parse(raw)
+  } catch {
+    return null
   }
 }
 
@@ -434,6 +458,101 @@ export default {
         .first<{ id: number }>()
 
       await setActive(env.DB, inserted!.id, round!.id)
+      return json(await readState(env.DB))
+    }
+
+    // ---- POST /api/tag : mark a board Swing / Anchor / Bonus ----
+    if (path === '/api/tag') {
+      if (request.method !== 'POST') return json({ error: `${request.method} not allowed` }, 405)
+      let body: any
+      try {
+        body = await request.json()
+      } catch {
+        return json({ error: 'Body is not valid JSON' }, 400)
+      }
+
+      const active = await resolveActive(env.DB)
+      if (!active) return json({ error: 'No round is set up' }, 404)
+
+      const boardId = Number(body?.boardId)
+      if (!Number.isInteger(boardId)) return json({ error: 'boardId must be a number' }, 400)
+
+      const board = await env.DB.prepare('SELECT * FROM board WHERE round_id = ? AND board_no = ?')
+        .bind(active.round.id, boardId)
+        .first<BoardRow>()
+      if (!board) return json({ error: `No board ${boardId} in this round` }, 404)
+
+      // Unlocking is its own action: it reopens the board without touching the
+      // tag or the outlook it seeded.
+      if (body?.locked === false) {
+        await env.DB.prepare('UPDATE board SET tag_locked = 0 WHERE id = ?').bind(board.id).run()
+        return json(await readState(env.DB))
+      }
+
+      const tag = body?.tag
+      if (tag === null) {
+        await env.DB.prepare('UPDATE board SET tag = NULL, tag_locked = 0 WHERE id = ?')
+          .bind(board.id)
+          .run()
+        return json(await readState(env.DB))
+      }
+
+      if (typeof tag !== 'string' || !TAGS.includes(tag)) {
+        return json({ error: `tag must be one of ${TAGS.join(', ')}, or null` }, 400)
+      }
+      // Full time has already settled the outlook; a tag must not undo that.
+      const outlook = board.period === 'FT' ? board.outlook : TAG_OUTLOOK[tag]
+      await env.DB.prepare('UPDATE board SET tag = ?, tag_locked = 1, outlook = ? WHERE id = ?')
+        .bind(tag, outlook, board.id)
+        .run()
+      return json(await readState(env.DB))
+    }
+
+    // ---- PUT /api/scout : NAF Scout delivers a round's scouting ----
+    if (path === '/api/scout') {
+      const active = await resolveActive(env.DB)
+      if (!active) return json({ error: 'No round is set up' }, 404)
+
+      if (request.method === 'DELETE') {
+        await env.DB.prepare('DELETE FROM scout WHERE round_id = ?').bind(active.round.id).run()
+        return json(await readState(env.DB))
+      }
+
+      if (request.method !== 'PUT') return json({ error: `${request.method} not allowed` }, 405)
+
+      let body: any
+      try {
+        body = await request.json()
+      } catch {
+        return json({ error: 'Body is not valid JSON' }, 400)
+      }
+      if (typeof body !== 'object' || body === null || !Array.isArray(body.boards)) {
+        return json({ error: 'Expected a ScoutRound: { generatedAt, boards: [...] }' }, 400)
+      }
+      // Deliberately shallow: every figure inside is optional by contract, and
+      // the view already renders a missing one as a dash. Rejecting on detail
+      // would make Scout's job harder for no gain.
+      for (const b of body.boards) {
+        if (!Number.isInteger(b?.boardId)) {
+          return json({ error: 'Each board needs an integer boardId' }, 400)
+        }
+      }
+
+      await env.DB.prepare(
+        `INSERT INTO scout (round_id, payload, generated_at, updated_at)
+         VALUES (?, ?, ?, datetime('now'))
+           ON CONFLICT(round_id) DO UPDATE
+              SET payload = excluded.payload,
+                  generated_at = excluded.generated_at,
+                  updated_at = datetime('now')`,
+      )
+        .bind(
+          active.round.id,
+          JSON.stringify(body),
+          typeof body.generatedAt === 'string' ? body.generatedAt : null,
+        )
+        .run()
+
       return json(await readState(env.DB))
     }
 

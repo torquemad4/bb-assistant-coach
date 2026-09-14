@@ -60,6 +60,7 @@ function asCount(value: unknown): number {
 
 function normalise(payload: any): Round {
   return {
+    scout: payload.scout ?? null,
     tournaments: payload.tournaments ?? [],
     activeTournamentId: payload.activeTournamentId,
     rounds: payload.rounds ?? [],
@@ -78,6 +79,8 @@ function normalise(payload: any): Round {
       b: { ...b.b, score: asCount(b.b.score), injuries: asCount(b.b.injuries) },
       period: asPeriod(b.period),
       kickoff: asKickoff(b.kickoff),
+      tag: b.tag ?? null,
+      tagLocked: b.tagLocked === true,
       outlook: asOutlook(b.outlook),
     })),
   }
@@ -171,4 +174,14 @@ export async function activate(tournamentId?: number, roundId?: number): Promise
 /** Creates an empty tournament with a single round, and switches to it. */
 export async function createTournament(name: string): Promise<Round> {
   return normalise(await post('/api/tournaments', { name }))
+}
+
+/** Tags a board, which locks it and seeds its outlook. */
+export async function setBoardTag(boardId: number, tag: string | null): Promise<Round> {
+  return normalise(await post('/api/tag', { boardId, tag }))
+}
+
+/** Reopens a tagged board without changing the tag or the outlook it seeded. */
+export async function unlockBoardTag(boardId: number): Promise<Round> {
+  return normalise(await post('/api/tag', { boardId, locked: false }))
 }

@@ -1,0 +1,233 @@
+import { RACE_TAG, type Race } from '../data/races'
+import { Flag } from './Flag'
+import {
+  gameCount,
+  rateLabel,
+  recordLabel,
+  type ScoutBoard,
+  type ScoutCoach,
+  type ScoutFormGame,
+  type ScoutRecord,
+} from '../scout'
+import type { RoundController } from '../state/useRound'
+import { TAGS, TAG_LABEL, type Board, type CountryCode, type Side, type Tag } from '../types'
+
+/** Fewer games than this and the figure is marked as a small sample. */
+const THIN_SAMPLE = 5
+
+function raceTag(race: string): string {
+  return RACE_TAG[race as Race] ?? race.slice(0, 4).toUpperCase()
+}
+
+interface StatProps {
+  label: string
+  record: ScoutRecord | null | undefined
+}
+
+/** One record row: what it measures, the W/D/L, and the rate. */
+function Stat({ label, record }: StatProps) {
+  const games = gameCount(record)
+  const thin = record != null && games > 0 && games < THIN_SAMPLE
+  return (
+    <div className={`pm-stat${record ? '' : ' pm-stat--empty'}`}>
+      <span className="pm-stat__label">{label}</span>
+      <span className="pm-stat__record">{recordLabel(record)}</span>
+      <span className="pm-stat__rate">
+        {rateLabel(record?.winRate)}
+        {thin && (
+          <span className="pm-stat__thin" title={`Only ${games} games`}>
+            *
+          </span>
+        )}
+      </span>
+    </div>
+  )
+}
+
+function Form({ games }: { games: ScoutFormGame[] | undefined }) {
+  if (!games || games.length === 0) {
+    return <div className="pm-form pm-form--empty">No recent games</div>
+  }
+  return (
+    <div className="pm-form" aria-label="Recent form, most recent first">
+      {games.slice(0, 10).map((g, i) => (
+        <span
+          key={`${g.date}-${i}`}
+          className={`pm-pip pm-pip--${g.result.toLowerCase()}`}
+          title={`${g.result} ${g.scoreFor}-${g.scoreAgainst} v ${g.opponent} (${g.opponentRace}), ${g.date}`}
+        >
+          {g.result}
+        </span>
+      ))}
+    </div>
+  )
+}
+
+interface CoachBlockProps {
+  side: Side
+  team: 'a' | 'b'
+  country: CountryCode | null
+  scout: ScoutCoach | null | undefined
+  oppRace: string
+}
+
+function CoachBlock({ side, team, country, scout, oppRace }: CoachBlockProps) {
+  const opp = raceTag(oppRace)
+  return (
+    <div className={`pm-coach pm-coach--${team}`}>
+      <div className="pm-coach__head">
+        <Flag country={country} />
+        <span className="pm-coach__name" title={side.nafName}>
+          {side.nafName}
+        </span>
+        <span className="pm-coach__race">{side.race}</span>
+      </div>
+
+      <div className="pm-rating">
+        <span className="pm-rating__value">{scout?.ratingWithRace?.toFixed(1) ?? '—'}</span>
+        <span className="pm-rating__sep">/</span>
+        <span className="pm-rating__max">{scout?.ratingMax?.toFixed(1) ?? '—'}</span>
+        <span className="pm-rating__note">
+          {scout?.ratingMaxRace ? `best: ${scout.ratingMaxRace}` : 'rating / best'}
+        </span>
+      </div>
+
+      <Stat label="With race" record={scout?.withRace} />
+      <Stat label="vs 200+" record={scout?.withRaceVs200} />
+      <Stat label={`vs ${opp}`} record={scout?.vsOppRace} />
+      <Stat label={`vs ${opp} 200+`} record={scout?.vsOppRaceVs200} />
+
+      <Form games={scout?.form} />
+    </div>
+  )
+}
+
+interface CardProps {
+  board: Board
+  scout: ScoutBoard | undefined
+  controller: RoundController
+  countryA: CountryCode | null
+  countryB: CountryCode | null
+}
+
+function PreMatchCard({ board, scout, controller, countryA, countryB }: CardProps) {
+  const { tagBoard, unlockBoard, tagging, connection } = controller
+  const locked = board.tagLocked
+  const disabled = connection !== 'live' || tagging
+  const matchup = scout?.matchup
+
+  return (
+    <article className={`pm-card${locked ? ' pm-card--locked' : ''}`}>
+      <header className="pm-card__head">
+        <span className="pm-card__no">Board {board.id}</span>
+
+        {locked && board.tag ? (
+          <span className="pm-card__locked">
+            <span className={`tag tag--${board.tag}`}>{TAG_LABEL[board.tag]}</span>
+            <button
+              type="button"
+              className="pm-unlock"
+              onClick={() => unlockBoard(board.id)}
+              disabled={disabled}
+              title="Reopen this board — the tag and its outlook stay as they are"
+            >
+              Unlock
+            </button>
+          </span>
+        ) : (
+          <span className="pm-tags" role="group" aria-label={`Board ${board.id} tag`}>
+            {TAGS.map((tag: Tag) => (
+              <button
+                key={tag}
+                type="button"
+                className={`pm-tag-btn${board.tag === tag ? ' is-active' : ''}`}
+                onClick={() => tagBoard(board.id, tag)}
+                disabled={disabled}
+                title={`${TAG_LABEL[tag]} — starts this board's outlook at ${
+                  tag === 'swing' ? '−0.5' : tag === 'anchor' ? '0' : '+0.5'
+                }`}
+              >
+                {TAG_LABEL[tag]}
+              </button>
+            ))}
+          </span>
+        )}
+      </header>
+
+      <CoachBlock
+        side={board.a}
+        team="a"
+        country={countryA}
+        scout={scout?.a}
+        oppRace={board.b.race}
+      />
+
+      <div className="pm-matchup">
+        <span className="pm-matchup__races">
+          {raceTag(board.a.race)} <em>v</em> {raceTag(board.b.race)}
+        </span>
+        <span className="pm-matchup__rate">{rateLabel(matchup?.winRate)}</span>
+        <span className="pm-matchup__note">
+          {matchup?.games ? `${matchup.games.toLocaleString()} games` : 'Euro rules, home side'}
+        </span>
+      </div>
+
+      <CoachBlock
+        side={board.b}
+        team="b"
+        country={countryB}
+        scout={scout?.b}
+        oppRace={board.a.race}
+      />
+    </article>
+  )
+}
+
+/** Tab three: the pre-round read on every board, and where boards get tagged. */
+export function PreMatch(controller: RoundController) {
+  const { round } = controller
+  const scout = round.scout
+  const byBoard = new Map((scout?.boards ?? []).map((b) => [b.boardId, b]))
+
+  return (
+    <div className="pm">
+      <div className="pm__bar">
+        <p className="pm__hint">
+          Tag each board before the round starts. <strong>Swing</strong> opens at −0.5,{' '}
+          <strong>Anchor</strong> at 0, <strong>Bonus</strong> at +0.5. Tagging locks the board;
+          unlocking is deliberate.
+        </p>
+        <span className="pm__scouted">
+          {scout
+            ? `Scouted ${new Date(scout.generatedAt).toLocaleString([], {
+                day: 'numeric',
+                month: 'short',
+                hour: '2-digit',
+                minute: '2-digit',
+              })}`
+            : 'No scouting delivered for this round'}
+        </span>
+      </div>
+
+      {!scout && (
+        <p className="pm__empty">
+          NAF Scout has not delivered scouting for this round. Boards can still be tagged — every
+          figure below will show as a dash until it arrives.
+        </p>
+      )}
+
+      <div className="pm__grid">
+        {round.boards.map((board) => (
+          <PreMatchCard
+            key={board.id}
+            board={board}
+            scout={byBoard.get(board.id)}
+            controller={controller}
+            countryA={round.teamA.country}
+            countryB={round.teamB.country}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}

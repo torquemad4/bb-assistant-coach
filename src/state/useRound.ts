@@ -3,6 +3,8 @@ import {
   activate,
   createTournament,
   fetchRound,
+  setBoardTag,
+  unlockBoardTag,
   linkTournament,
   saveRound,
   setSyncMode,
@@ -77,6 +79,10 @@ export interface RoundController {
   nudgeScore: (boardId: number, team: TeamId, direction: 1 | -1) => void
   nudgeInjuries: (boardId: number, team: TeamId, direction: 1 | -1) => void
   setPeriod: (boardId: number, period: Period) => void
+  /** Tagging locks the board and seeds its outlook. */
+  tagBoard: (boardId: number, tag: string | null) => void
+  unlockBoard: (boardId: number) => void
+  tagging: boolean
   setKickoff: (boardId: number, kickoff: Kickoff) => void
   /** Throw away unsaved edits and go back to the last saved state. */
   discard: () => void
@@ -127,6 +133,7 @@ export function useRound(): RoundController {
   const [linkError, setLinkError] = useState<string | null>(null)
   const [linking, setLinking] = useState(false)
   const [switching, setSwitching] = useState(false)
+  const [tagging, setTagging] = useState(false)
 
   const dirtyBoardIds = useMemo(() => {
     const byId = new Map(baseline.boards.map((b) => [b.id, b]))
@@ -364,6 +371,35 @@ export function useRound(): RoundController {
     }
   }, [])
 
+  // Tagging writes straight through rather than becoming unsaved work: it is a
+  // decision about the round, not a score being nudged.
+  const applyTag = useCallback(async (boardId: number, tag: string | null) => {
+    setTagging(true)
+    try {
+      const fresh = await setBoardTag(boardId, tag)
+      setRound(fresh)
+      setBaseline(fresh)
+      setSaveError(null)
+    } catch (cause) {
+      setSaveError(cause instanceof Error ? cause.message : String(cause))
+    } finally {
+      setTagging(false)
+    }
+  }, [])
+
+  const applyUnlock = useCallback(async (boardId: number) => {
+    setTagging(true)
+    try {
+      const fresh = await unlockBoardTag(boardId)
+      setRound(fresh)
+      setBaseline(fresh)
+    } catch (cause) {
+      setSaveError(cause instanceof Error ? cause.message : String(cause))
+    } finally {
+      setTagging(false)
+    }
+  }, [])
+
   const aggregate = useMemo(
     () => round.boards.reduce((total, board) => total + board.outlook, 0),
     [round.boards],
@@ -385,6 +421,9 @@ export function useRound(): RoundController {
     nudgeInjuries,
     setPeriod,
     setKickoff,
+    tagBoard: (boardId: number, tag: string | null) => void applyTag(boardId, tag),
+    unlockBoard: (boardId: number) => void applyUnlock(boardId),
+    tagging,
     discard,
     save: () => void save(),
     reload,
