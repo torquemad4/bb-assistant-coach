@@ -1684,6 +1684,41 @@ h1 {
 
 /* Matches the theme button: they are a pair of screen controls, not two
    unrelated things that happen to sit together. */
+/* Same shape as the theme button: a row of screen controls. `is-asked` is the
+   honest middle state — we asked, the device said no. */
+.wake {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--bg-sunken);
+  color: var(--ink-dim);
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+.wake:hover {
+  color: var(--ink);
+}
+
+.wake.is-on {
+  border-color: var(--up);
+  color: var(--up);
+}
+
+.wake.is-asked {
+  border-color: var(--pending);
+  color: var(--pending);
+}
+
+.wake__glyph {
+  font-size: 0.7rem;
+  line-height: 1;
+}
+
 .fullscreen {
   display: flex;
   align-items: center;

@@ -4,6 +4,7 @@ import { Dashboard } from './components/Dashboard'
 import { PreMatch } from './components/PreMatch'
 import { Selectors } from './components/Selectors'
 import { FullscreenToggle } from './components/FullscreenToggle'
+import { WakeToggle } from './components/WakeToggle'
 import { ThemeToggle } from './components/ThemeToggle'
 import { useRound } from './state/useRound'
 
@@ -43,6 +44,7 @@ export default function App() {
 
         <div className="topbar__tools">
           <ThemeToggle />
+          <WakeToggle />
           <FullscreenToggle />
         </div>
 
