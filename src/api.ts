@@ -177,6 +177,44 @@ export async function createTournament(name: string): Promise<Round> {
   return normalise(await post('/api/tournaments', { name }))
 }
 
+/** Who Cloudflare Access says this browser belongs to. */
+export interface Identity {
+  state: 'local' | 'verified' | 'rejected'
+  email: string | null
+  name: string | null
+  nafNumber: number | null
+  isAdmin: boolean
+  board: { id: number; side: 'a' | 'b'; opponent: string } | null
+  /** False when ACCESS_AUD is unset, which weakens the check — see access.ts. */
+  audChecked: boolean
+  reason: string | null
+}
+
+export async function fetchIdentity(signal?: AbortSignal): Promise<Identity> {
+  const response = await fetch('/api/me', { signal, headers: { accept: 'application/json' } })
+  if (!response.ok) throw new Error(await errorFrom(response))
+  return response.json()
+}
+
+/** The match state a coach may report for their own board. */
+export interface MyBoardEntry {
+  aScore: number
+  aInjuries: number
+  bScore: number
+  bInjuries: number
+  period: Period
+  kickoff: Kickoff
+}
+
+/**
+ * Reports a coach's own board. Deliberately carries no board number: the
+ * server works it out from the Access identity, so this cannot address anyone
+ * else's match.
+ */
+export async function saveMyBoard(entry: MyBoardEntry): Promise<Round> {
+  return normalise(await post('/api/my-board', entry))
+}
+
 /** Marks the line-up on screen as provisional, or confirms it. */
 export async function setProvisional(provisional: boolean): Promise<Round> {
   return normalise(await post('/api/provisional', { provisional }))

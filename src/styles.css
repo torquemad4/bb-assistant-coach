@@ -2359,3 +2359,288 @@ h1 {
   color: var(--ink-faint);
   white-space: nowrap;
 }
+
+/* ---------- my board: a coach's own phone ----------
+   Sized for a thumb and one hand at a table, not for the coordinator's tablet.
+   Everything stacks; nothing here assumes width. */
+
+.mb {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 560px;
+  width: 100%;
+  margin: 0 auto;
+  overflow-y: auto;
+}
+
+.mb__none {
+  margin: 0;
+  padding: 14px;
+  border-radius: var(--radius);
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  line-height: 1.5;
+}
+
+.mb__head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.mb__board {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.mb__vs {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.mb__vs em {
+  font-style: normal;
+  color: var(--ink-faint);
+  padding: 0 4px;
+}
+
+.mb__scores {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.mb-step {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  border-radius: var(--radius);
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+}
+
+.mb-step__label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--ink-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.mb-step__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mb-step__row button {
+  flex: 1;
+  min-height: var(--tap);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--bg-sunken);
+  color: var(--ink);
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.mb-step__row button:disabled {
+  color: var(--ink-disabled);
+  cursor: default;
+}
+
+.mb-step__value {
+  min-width: 2.2ch;
+  text-align: center;
+  font-size: 1.9rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.mb-step--cas .mb-step__value {
+  color: var(--down);
+}
+
+.mb__row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.mb__row-label {
+  flex: 0 0 100%;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--ink-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.mb-pill {
+  flex: 1;
+  min-height: 48px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--bg-raised);
+  color: var(--ink-dim);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.mb-pill.is-on {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--bg);
+}
+
+.mb-pill--ft.is-on {
+  background: var(--pending);
+  border-color: var(--pending);
+  color: var(--pending-ink);
+}
+
+.mb-pill:disabled {
+  color: var(--ink-disabled);
+  cursor: default;
+}
+
+.mb__result {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: var(--radius);
+}
+
+.mb__result--w { background: var(--up); color: var(--on-up); }
+.mb__result--d { background: var(--level); color: var(--on-level); }
+.mb__result--l { background: var(--down); color: var(--on-down); }
+
+.mb__result-letter {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 2.6rem;
+  line-height: 1;
+}
+
+.mb__result-note {
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.mb__status {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+  min-height: 1.2em;
+}
+
+.mb__status--saving { color: var(--pending); }
+.mb__status--saved { color: var(--up); }
+
+.mb__status--failed {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px;
+  border-radius: var(--radius-sm);
+  background: var(--down-soft);
+  border: 1px solid var(--down);
+  color: var(--ink);
+}
+
+.mb__status--failed .mb-pill {
+  flex: 0 0 auto;
+  min-height: 40px;
+}
+
+.mb__round {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border-radius: var(--radius);
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+}
+
+.mb__outlook {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.mb__outlook-label {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.mb__outlook-value {
+  font-size: 2rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.mb__results {
+  display: flex;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  flex-wrap: wrap;
+}
+
+.mb__pip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 34px;
+}
+
+.mb__pip.is-mine .mb__pip-no {
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.mb__pip-no {
+  font-size: 0.62rem;
+  color: var(--ink-faint);
+  font-weight: 700;
+}
+
+.mb__pip-result {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-sunken);
+  color: var(--ink-faint);
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 1rem;
+}
+
+.mb__pip-result.is-w { background: var(--up); color: var(--on-up); }
+.mb__pip-result.is-d { background: var(--level); color: var(--on-level); }
+.mb__pip-result.is-l { background: var(--down); color: var(--on-down); }
+
+/* One column once the phone is narrow, rather than two cramped steppers. */
+@media (max-width: 420px) {
+  .mb__scores {
+    grid-template-columns: 1fr;
+  }
+}

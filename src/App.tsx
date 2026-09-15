@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { ControlPanel } from './components/ControlPanel'
 import { Dashboard } from './components/Dashboard'
 import { PreMatch } from './components/PreMatch'
@@ -6,20 +6,34 @@ import { Selectors } from './components/Selectors'
 import { FullscreenToggle } from './components/FullscreenToggle'
 import { WakeToggle } from './components/WakeToggle'
 import { ThemeToggle } from './components/ThemeToggle'
+import { MyBoard } from './components/MyBoard'
+import { useIdentity } from './state/useIdentity'
 import { useRound } from './state/useRound'
 
-type Tab = 'dashboard' | 'prematch' | 'control'
-
-const TABS: { id: Tab; label: string }[] = [
-  { id: 'dashboard', label: 'Dashboard' },
-  { id: 'prematch', label: 'Pre-Match' },
-  { id: 'control', label: 'Match Control' },
-]
+type Tab = 'myboard' | 'dashboard' | 'prematch' | 'control'
 
 export default function App() {
-  const [tab, setTab] = useState<Tab>('dashboard')
   const controller = useRound()
   const { round, connection, loadError, isDirty, reload } = controller
+  const { identity, loaded: identityLoaded } = useIdentity()
+
+  // Match Control can rewrite every board, so it is the coordinator's alone —
+  // the server refuses a coach's write either way, but offering a control that
+  // will be refused is its own kind of wrong. My Board appears only for
+  // somebody who actually has one.
+  const tabs = useMemo(() => {
+    const list: { id: Tab; label: string }[] = []
+    if (identity.board) list.push({ id: 'myboard', label: 'My Board' })
+    list.push({ id: 'dashboard', label: 'Dashboard' }, { id: 'prematch', label: 'Pre-Match' })
+    if (identity.isAdmin) list.push({ id: 'control', label: 'Match Control' })
+    return list
+  }, [identity.board, identity.isAdmin])
+
+  // A coach opening this on their phone wants their own board, not the hall
+  // dashboard. Only once identity has actually answered, or it would flick.
+  const [chosen, setChosen] = useState<Tab | null>(null)
+  const tab: Tab = chosen ?? (identityLoaded && identity.board ? 'myboard' : 'dashboard')
+  const setTab = setChosen
 
   if (connection === 'loading') {
     return (
@@ -40,7 +54,10 @@ export default function App() {
           </p>
         </div>
 
-        <Selectors {...controller} />
+        {/* Shared state: switching the round moves it for every device in the
+            hall, so it is the coordinator's control. The server refuses anyone
+            else, but a button that will be refused should not be there. */}
+        {identity.isAdmin && <Selectors {...controller} />}
 
         <div className="topbar__tools">
           <ThemeToggle />
@@ -49,7 +66,7 @@ export default function App() {
         </div>
 
         <nav className="tabs" aria-label="Views">
-          {TABS.map((entry) => (
+          {tabs.map((entry) => (
             <button
               key={entry.id}
               type="button"
@@ -86,9 +103,10 @@ export default function App() {
       )}
 
       <main className="stage">
+        {tab === 'myboard' && <MyBoard controller={controller} identity={identity} />}
         {tab === 'dashboard' && <Dashboard {...controller} />}
         {tab === 'prematch' && <PreMatch {...controller} />}
-        {tab === 'control' && <ControlPanel {...controller} />}
+        {tab === 'control' && identity.isAdmin && <ControlPanel {...controller} />}
       </main>
     </div>
   )

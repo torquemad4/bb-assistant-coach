@@ -20,12 +20,86 @@
 import { fetchLiveRound, fetchTournament, type LiveMatch } from './tourplay'
 import { pingEngine, pullScouting } from './scout'
 import { fetchMatchups, tableFromSnapshot, MATCHUP_MAX_AGE_MS, type MatchupPayload } from './matchups'
+import { identify } from './access'
 
 export interface Env {
   DB: D1Database
   ASSETS: Fetcher
   /** Base URL of the NAF Scout engine. Unset falls back to the hosted service. */
   SCOUT_API_URL?: string
+  /** Zero Trust team domain. Unset falls back to the one in access.ts. */
+  ACCESS_TEAM_DOMAIN?: string
+  /**
+   * The Access application's Audience tag. Unset means the `aud` claim is not
+   * checked, which /api/me reports rather than hides — see access.ts.
+   */
+  ACCESS_AUD?: string
+}
+
+/** Who is asking, once Access and the roster have both had their say. */
+interface Viewer {
+  state: 'local' | 'verified' | 'rejected'
+  email: string | null
+  displayName: string | null
+  nafNumber: number | null
+  isAdmin: boolean
+  audChecked: boolean
+  reason: string | null
+}
+
+/**
+ * Resolves the caller.
+ *
+ * A login Access recognises but the roster does not is a WATCHER: everything
+ * visible, nothing writable. That is deliberately the default, so adding an
+ * email to the Access allowlist never silently grants write access to the round.
+ */
+async function resolveViewer(request: Request, env: Env): Promise<Viewer> {
+  const access = await identify(request, env)
+
+  if (access.state !== 'verified' || !access.claims) {
+    return {
+      state: access.state,
+      email: null,
+      displayName: null,
+      nafNumber: null,
+      // Off Access entirely (local dev) the developer is the coordinator.
+      isAdmin: access.state === 'local',
+      audChecked: false,
+      reason: access.reason,
+    }
+  }
+
+  const row = await env.DB.prepare(
+    'SELECT naf_number, display_name, is_admin FROM coach_identity WHERE email = ?',
+  )
+    .bind(access.claims.email)
+    .first<{ naf_number: number | null; display_name: string | null; is_admin: number }>()
+
+  return {
+    state: 'verified',
+    email: access.claims.email,
+    displayName: row?.display_name ?? null,
+    nafNumber: row?.naf_number ?? null,
+    isAdmin: row?.is_admin === 1,
+    audChecked: access.claims.audChecked,
+    reason: null,
+  }
+}
+
+/** The refusal a non-coordinator gets from a coordinator-only endpoint. */
+function notAllowed(viewer: Viewer): Response {
+  if (viewer.state === 'rejected') {
+    return json({ error: viewer.reason ?? 'Your Access session could not be checked' }, 403)
+  }
+  return json(
+    {
+      error: viewer.nafNumber
+        ? 'Only the coordinator can change this. Your own board is on the My Board tab.'
+        : 'Only the coordinator can change this.',
+    },
+    403,
+  )
 }
 
 /** Every viewer polls, so Tourplay is only re-read when the data is older than this. */
@@ -446,10 +520,156 @@ async function loadMatchups(
   }
 }
 
+/**
+ * Endpoints only the coordinator may call, checked in ONE place rather than
+ * eleven. Scattered guards are how one endpoint ends up unguarded, and every
+ * one of these can rewrite boards that are not the caller's.
+ */
+const COORDINATOR_PATHS = new Set([
+  '/api/activate',
+  '/api/tournaments',
+  '/api/tag',
+  '/api/provisional',
+  '/api/scout',
+  '/api/scout/refresh',
+  '/api/sync',
+  '/api/sync-mode',
+  '/api/link',
+  '/api/board-order',
+])
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url)
     const path = url.pathname
+
+    // Reading is open to anyone Access let through; writing is not. Resolved
+    // only for writes, so the ten-second poll costs no crypto.
+    const writing = request.method !== 'GET' && request.method !== 'HEAD'
+    if (writing && (COORDINATOR_PATHS.has(path) || path === '/api/round')) {
+      const viewer = await resolveViewer(request, env)
+      if (!viewer.isAdmin) return notAllowed(viewer)
+    }
+
+    // ---- GET /api/me : who does this browser belong to? ----
+    if (path === '/api/me') {
+      if (request.method !== 'GET') return json({ error: `${request.method} not allowed` }, 405)
+      const viewer = await resolveViewer(request, env)
+
+      // Which board, if any, in the round currently on screen. By NAF number,
+      // so re-pairing and board reordering both take care of themselves.
+      let board: { id: number; side: 'a' | 'b'; opponent: string } | null = null
+      if (viewer.nafNumber != null) {
+        const active = await resolveActive(env.DB)
+        if (active) {
+          const row = await env.DB.prepare(
+            `SELECT board_no, a_naf_number, a_naf_name, b_naf_name
+               FROM board
+              WHERE round_id = ? AND (a_naf_number = ? OR b_naf_number = ?)`,
+          )
+            .bind(active.round.id, viewer.nafNumber, viewer.nafNumber)
+            .first<{
+              board_no: number
+              a_naf_number: number | null
+              a_naf_name: string
+              b_naf_name: string
+            }>()
+          if (row) {
+            const side = row.a_naf_number === viewer.nafNumber ? 'a' : 'b'
+            board = {
+              id: row.board_no,
+              side,
+              opponent: side === 'a' ? row.b_naf_name : row.a_naf_name,
+            }
+          }
+        }
+      }
+
+      return json({
+        state: viewer.state,
+        email: viewer.email,
+        name: viewer.displayName,
+        nafNumber: viewer.nafNumber,
+        isAdmin: viewer.isAdmin,
+        board,
+        // Surfaced, not hidden: an unset ACCESS_AUD means a token minted for a
+        // different Access app in the same account would also be accepted.
+        audChecked: viewer.audChecked,
+        reason: viewer.reason,
+      })
+    }
+
+    // ---- POST /api/my-board : a coach reports their own match ----
+    if (path === '/api/my-board') {
+      if (request.method !== 'POST') return json({ error: `${request.method} not allowed` }, 405)
+      const viewer = await resolveViewer(request, env)
+      if (viewer.state === 'rejected') return notAllowed(viewer)
+      if (viewer.nafNumber == null) {
+        return json({ error: 'You are not on the roster for this round.' }, 403)
+      }
+
+      const active = await resolveActive(env.DB)
+      if (!active) return json({ error: 'No round is set up' }, 404)
+
+      // Tourplay owns match state while it is being followed; anything entered
+      // here would be overwritten within ten seconds, which is worse than
+      // being told no.
+      if (active.tournament.sync_enabled === 1) {
+        return json(
+          { error: 'This round is following Tourplay. The coordinator must switch to manual entry first.' },
+          409,
+        )
+      }
+
+      // The board is NEVER taken from the request. A coach cannot name a board,
+      // so they cannot name someone else's.
+      const board = await env.DB.prepare(
+        `SELECT * FROM board WHERE round_id = ? AND (a_naf_number = ? OR b_naf_number = ?)`,
+      )
+        .bind(active.round.id, viewer.nafNumber, viewer.nafNumber)
+        .first<BoardRow>()
+      if (!board) return json({ error: 'You do not have a board in this round.' }, 404)
+
+      let body: any
+      try {
+        body = await request.json()
+      } catch {
+        return json({ error: 'Body is not valid JSON' }, 400)
+      }
+
+      const aScore = count(body?.aScore)
+      const aInjuries = count(body?.aInjuries)
+      const bScore = count(body?.bScore)
+      const bInjuries = count(body?.bInjuries)
+      if (aScore === null || aInjuries === null || bScore === null || bInjuries === null) {
+        return json({ error: `Scores and casualties must be whole numbers, 0 to ${MAX_COUNT}` }, 400)
+      }
+      const period = body?.period
+      if (!PERIODS.includes(period)) {
+        return json({ error: `period must be one of ${PERIODS.join(', ')}` }, 400)
+      }
+      const kickoff = body?.kickoff === 'K' || body?.kickoff === 'R' ? body.kickoff : null
+
+      // Full time settles the outlook from the score, exactly as it does for
+      // the coordinator — and leaving FT hands it back, so a mistake can be
+      // undone rather than needing someone else to fix it.
+      const outlook =
+        period === 'FT' ? (aScore > bScore ? 1 : aScore < bScore ? -1 : 0) : board.outlook
+
+      await env.DB.batch([
+        env.DB.prepare(
+          `UPDATE board
+              SET a_score = ?, a_injuries = ?, b_score = ?, b_injuries = ?,
+                  period = ?, kickoff = ?, outlook = ?
+            WHERE id = ?`,
+        ).bind(aScore, aInjuries, bScore, bInjuries, period, kickoff, outlook, board.id),
+        env.DB.prepare("UPDATE round SET updated_at = datetime('now') WHERE id = ?").bind(
+          active.round.id,
+        ),
+      ])
+
+      return json(await readState(env.DB))
+    }
 
     // ---- POST /api/activate : switch tournament and/or round ----
     if (path === '/api/activate') {

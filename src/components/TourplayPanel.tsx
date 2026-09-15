@@ -45,17 +45,20 @@ export function TourplayPanel(controller: RoundController) {
         <div className="tp__status">
           {link?.slug ? (
             <>
-              <strong>{followingTourplay ? 'Following' : 'Linked to'}</strong> {link.slug}
+              <strong>{followingTourplay ? 'Tourplay live' : 'Manual entry'}</strong> · {link.slug}
               <span className="tp__meta">
                 {followingTourplay
-                  ? ` · synced ${clock(link.lastSyncedAt)}`
-                  : ' · sync off, entering by hand'}
+                  ? ` · match state pulled, synced ${clock(link.lastSyncedAt)}. Coaches cannot enter results.`
+                  : ' · pairings and races still import from Tourplay; scores are entered by hand, here or by the coaches themselves.'}
               </span>
             </>
           ) : (
             <>
-              <strong>Not linked to Tourplay.</strong>
-              <span className="tp__meta"> Scores are entered by hand.</span>
+              <strong>Manual entry.</strong>
+              <span className="tp__meta">
+                {' '}Not linked to Tourplay, so everything is entered by hand — here, or by the
+                coaches on their own phones.
+              </span>
             </>
           )}
         </div>
@@ -76,7 +79,7 @@ export function TourplayPanel(controller: RoundController) {
               onClick={() => setFollowing(!followingTourplay)}
               disabled={disabled}
             >
-              {followingTourplay ? 'Take over by hand' : 'Follow Tourplay'}
+              {followingTourplay ? 'Switch to manual entry' : 'Follow Tourplay live'}
             </button>
           </>
         )}

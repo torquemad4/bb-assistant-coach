@@ -116,6 +116,14 @@ export interface RoundController {
   discard: () => void
   save: () => void
   reload: () => void
+  /**
+   * Take a round the server has just returned as the new truth.
+   *
+   * For writes that happen outside this hook — a coach reporting their own
+   * board — where `reload` would be wrong: it drops the app to its loading
+   * screen, which on a phone means the view vanishing after every tap.
+   */
+  adoptRound: (fresh: Round) => void
 
   /** True while match state is being pulled from Tourplay. */
   syncing: boolean
@@ -543,6 +551,10 @@ export function useRound(): RoundController {
     discard,
     save: () => void save(),
     reload,
+    adoptRound: (fresh: Round) => {
+      setRound(fresh)
+      setBaseline(fresh)
+    },
     syncing,
     syncError,
     liveRound,
