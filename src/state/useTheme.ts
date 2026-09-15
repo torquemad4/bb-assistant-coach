@@ -33,6 +33,20 @@ export function useTheme() {
     } catch {
       /* not being able to remember the choice is not worth failing over */
     }
+
+    // Installed to a home screen, the system bars take their colour from this.
+    // The two media-scoped tags in index.html cover 'system'; an explicit
+    // choice has to be written here or the status bar contradicts the app.
+    const resolved =
+      theme === 'system'
+        ? window.matchMedia('(prefers-color-scheme: dark)').matches
+          ? 'dark'
+          : 'light'
+        : theme
+    const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]:not([media])')
+    const tag = meta ?? document.head.appendChild(document.createElement('meta'))
+    tag.name = 'theme-color'
+    tag.content = resolved === 'dark' ? '#161b22' : '#ffffff'
   }, [theme])
 
   const cycle = useCallback(() => {

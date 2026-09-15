@@ -2,8 +2,30 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <!-- viewport-fit=cover so the app can reach under a tablet's rounded corners
+         and gesture bar; the safe-area insets in styles.css keep content clear. -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
     <title>Blood Bowl Round Coordinator</title>
+
+    <!-- Installed to a tablet's home screen, this launches with no address bar.
+         `standalone` rather than `fullscreen` on purpose: the clock and battery
+         stay visible, which matters at an all-day event. The button in the top
+         bar hides those too, for when the tablet is just a scoreboard. -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Coordinator" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <link rel="icon" href="/icons/icon-192.png" />
+
+    <!-- Matches the top bar in each theme, so the system bars blend into the app
+         rather than framing it. Kept in step with an explicit theme choice by
+         useTheme. -->
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#161b22" media="(prefers-color-scheme: dark)" />
   </head>
   <body>
     <div id="root"></div>

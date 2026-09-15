@@ -3,6 +3,7 @@ import { ControlPanel } from './components/ControlPanel'
 import { Dashboard } from './components/Dashboard'
 import { PreMatch } from './components/PreMatch'
 import { Selectors } from './components/Selectors'
+import { FullscreenToggle } from './components/FullscreenToggle'
 import { ThemeToggle } from './components/ThemeToggle'
 import { useRound } from './state/useRound'
 
@@ -40,7 +41,10 @@ export default function App() {
 
         <Selectors {...controller} />
 
-        <ThemeToggle />
+        <div className="topbar__tools">
+          <ThemeToggle />
+          <FullscreenToggle />
+        </div>
 
         <nav className="tabs" aria-label="Views">
           {TABS.map((entry) => (
