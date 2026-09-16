@@ -73,6 +73,13 @@ export interface LiveSide {
   teamName: string
   score: number
   injuries: number
+  /**
+   * Tourplay's own id for the player. The fixtures carry no NAF field at all,
+   * so this is the only thing that joins a coach in the draw to their NAF
+   * number in the entry list — and joining on an id beats joining on a display
+   * name that two people can share.
+   */
+  playerId: string | null
 }
 
 export interface LiveMatch {
@@ -131,7 +138,53 @@ function side(roster: any): LiveSide {
     teamName: roster?.teamName ?? '',
     score: 0,
     injuries: 0,
+    playerId: roster?.inscription?.player?.id ?? null,
   }
+}
+
+/**
+ * NAF numbers for everyone entered, keyed by Tourplay player id.
+ *
+ * A separate endpoint from the fixtures, and the only place Tourplay admits to
+ * knowing a NAF number. Plenty of entries have none, and those are simply
+ * absent from the map rather than guessed at.
+ *
+ * Only a number Tourplay has VERIFIED is taken. An unverified one is whatever
+ * the coach typed, and it is wrong in the way that matters: a real entrant in
+ * a live tournament carries `nafNumber: 1, nafVerified: false`, which resolves
+ * to the coach NAF calls "#1". An unverified number would rename a coach to a
+ * stranger, attach a stranger's scouting to them, and hand them a stranger's
+ * board when they sign in. Nothing is worth more than that is worth avoiding.
+ *
+ * Never throws: an import that cannot read the entry list still has a draw
+ * worth importing, it just keeps Tourplay's names.
+ */
+export async function fetchNafNumbers(slug: string): Promise<Map<string, number>> {
+  const byPlayer = new Map<string, number>()
+  try {
+    const tournament = await getJson<any>(`api/tournament/${slug}`, slug)
+    for (const category of tournament?.categories ?? []) {
+      const payload = await getJson<any>(
+        `api/inscriptions/${slug}/category/${category.id}/inscriptions`,
+        slug,
+      )
+      // Team events nest entries by squad; individual ones return a flat list.
+      const inner = payload?.[String(category.id)] ?? {}
+      const groups = Array.isArray(inner) ? [inner] : Object.values(inner)
+      for (const rows of groups as any[][]) {
+        for (const row of rows ?? []) {
+          const id = row?.player?.id
+          const naf = row?.player?.nafNumber
+          if (id && row?.player?.nafVerified === true && typeof naf === 'number' && naf > 0) {
+            byPlayer.set(String(id), naf)
+          }
+        }
+      }
+    }
+  } catch {
+    // No entry list, so no NAF numbers. The draw imports without them.
+  }
+  return byPlayer
 }
 
 /**

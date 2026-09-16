@@ -27,8 +27,13 @@ import { matchupKey, type MatchupTable } from './matchups'
  * (Cloudflare for "origin DNS failure"), which reads like a dead service rather
  * than a wrong address. The deployed URL is the one in `DEPLOY_UI.md`.
  */
-const DEFAULT_BASE =
+export const DEFAULT_BASE =
   'https://bb-county-app-euebajf9c8bnfqb0.ukwest-01.azurewebsites.net'
+
+/** The engine's address, however it was configured. One place, one spelling. */
+export function engineBase(base?: string): string {
+  return (base ?? DEFAULT_BASE).replace(/\/+$/, '')
+}
 
 /**
  * Peak-ELO threshold for an opponent to count as "established".
@@ -211,7 +216,7 @@ export async function pingEngine(base?: string): Promise<{
   health: string
   version: string | null
 }> {
-  const url = (base ?? DEFAULT_BASE).replace(/\/+$/, '')
+  const url = engineBase(base)
   let ok = false
   let health: string
   try {
@@ -334,7 +339,7 @@ export async function pullScouting(
   boards: ScoutBoardInput[],
   options: ScoutOptions = {},
 ): Promise<ScoutPullResult> {
-  const base = (options.base ?? DEFAULT_BASE).replace(/\/+$/, '')
+  const base = engineBase(options.base)
   const scope = options.scope ?? DEFAULT_SCOPE
 
   const skipped: ScoutSkip[] = []

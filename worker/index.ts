@@ -17,10 +17,11 @@
  * line-up.
  */
 
-import { fetchLiveRound, fetchTournament, type LiveMatch } from './tourplay'
+import { fetchLiveRound, fetchNafNumbers, fetchTournament, type LiveMatch } from './tourplay'
 import { pingEngine, pullScouting } from './scout'
 import { fetchMatchups, tableFromSnapshot, MATCHUP_MAX_AGE_MS, type MatchupPayload } from './matchups'
 import { identify } from './access'
+import { chooseName, nafHandles } from './naf'
 
 /**
  * How casualties read on screen. Declared here rather than imported: the Worker
@@ -1223,24 +1224,47 @@ export default {
         roundId = created!.id
       }
 
+      // Who these coaches are on NAF, rather than what they called themselves on
+      // Tourplay. Two hops — Tourplay player id to NAF number from the entry
+      // list, NAF number to handle from the Scout engine — and both fail soft:
+      // a coach with no NAF number, or an engine that is down, leaves the
+      // Tourplay name in place rather than blanking the board.
+      //
+      // The NAF number is worth storing for its own sake. Nothing was writing
+      // one before, which is why an imported round could not tell which board
+      // belonged to the coach signing in.
+      const nafByPlayer = await fetchNafNumbers(slug)
+      const nafNumberOf = (sideOf: { playerId: string | null }) =>
+        sideOf.playerId ? nafByPlayer.get(String(sideOf.playerId)) ?? null : null
+      const handles = await nafHandles(
+        matches.flatMap((m) => [nafNumberOf(m.local), nafNumberOf(m.visitor)]),
+        env.SCOUT_API_URL,
+      )
+      const displayName = (sideOf: { coach: string; playerId: string | null }) => {
+        const naf = nafNumberOf(sideOf)
+        return chooseName(sideOf.coach || 'Unknown', naf == null ? null : handles.get(naf))
+      }
+
       const statements: D1PreparedStatement[] = [
         env.DB.prepare('DELETE FROM board WHERE round_id = ?').bind(roundId),
       ]
       matches.forEach((m, index) => {
         statements.push(
           env.DB.prepare(
-            `INSERT INTO board (round_id, board_no, a_naf_name, a_race, a_score, a_injuries,
-                                b_naf_name, b_race, b_score, b_injuries, period, outlook,
-                                tourplay_match_id)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '1', 0, ?)`,
+            `INSERT INTO board (round_id, board_no, a_naf_name, a_naf_number, a_race, a_score,
+                                a_injuries, b_naf_name, b_naf_number, b_race, b_score,
+                                b_injuries, period, outlook, tourplay_match_id)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '1', 0, ?)`,
           ).bind(
             roundId,
             index + 1,
-            m.local.coach || 'Unknown',
+            displayName(m.local),
+            nafNumberOf(m.local),
             m.local.race || '',
             m.local.score,
             m.local.injuries,
-            m.visitor.coach || 'Unknown',
+            displayName(m.visitor),
+            nafNumberOf(m.visitor),
             m.visitor.race || '',
             m.visitor.score,
             m.visitor.injuries,
