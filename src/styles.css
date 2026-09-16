@@ -1177,8 +1177,46 @@ h1 {
 
 /* Phone-width fallback so nothing overflows sideways. */
 @media (max-width: 700px) {
+  /*
+   * The dashboard card is three bands sharing the column height — coach, score,
+   * coach — which is right on a tablet where the grid owns a tall fixed space.
+   * On a phone that same grid was handing four rows of cards about 126px each,
+   * and three bands cannot share 126px: the score, which has a floor of 1.9rem
+   * so it stays readable across a room, overflowed its band and drew straight
+   * over the names above and below it.
+   *
+   * So here the cards are sized by their contents instead, and the page scrolls
+   * — which it already does at this width. Eight boards stay two-up, because
+   * seeing the whole round at once is the entire point of this view; one board
+   * per row would read better and show three.
+   */
   .boards {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: min-content;
+    min-height: 0;
+  }
+
+  /* Bands stop competing for a height the card has not got, and take the height
+     their contents need. */
+  .board__side,
+  .side,
+  .board__score {
+    flex: none;
+  }
+
+  .board {
+    /* Enough that a full-time card is not a stub beside a live one. */
+    min-height: 138px;
+  }
+
+  .board__score {
+    padding: 7px 2px;
+  }
+
+  .board--ft .ft {
+    /* vh-based sizing came from a card that filled the screen; now it does not. */
+    font-size: 3.2rem;
+    padding: 14px 0;
   }
 
   .round__strip {
@@ -1313,12 +1351,19 @@ h1 {
     border-bottom: 1px solid var(--line);
   }
 
-  /* Four tabs at 412px are wider than the screen once a coordinator is looking;
-     one bar that scrolls sideways beats two rows of pinned buttons eating the
-     height this whole change is about. */
+  /* A coordinator has five tabs, and five will not fit a phone at any size worth
+     reading, so the bar scrolls sideways — one pinned row beats two rows of
+     buttons eating the height this whole change is about.
+     The tighter padding is what makes that discoverable: it leaves the next tab
+     visibly cut off at the edge rather than ending the row cleanly, which is the
+     difference between "there is more" and "that is all the tabs". */
   .tabs {
     overflow-x: auto;
     scrollbar-width: none;
+  }
+
+  .tabs__btn {
+    padding: 0 10px;
   }
 
   .tabs::-webkit-scrollbar {
