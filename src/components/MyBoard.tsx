@@ -167,8 +167,13 @@ export function MyBoard({
   const mine = seat.side
   const locked = live.period === 'FT'
 
-  // The whole page speaks in the coach's own terms — for and against, suffered
-  // and inflicted — so the team A / team B pairs are resolved once, here.
+  // The whole page speaks in the coach's own terms — for and against, inflicted
+  // and suffered — so the team A / team B pairs are resolved once, here.
+  //
+  // The four steppers are ordered so the left column is always what this coach
+  // did and the right is what was done to them: for / against, inflicted /
+  // suffered. Mixing those columns is how a casualty gets entered the wrong way
+  // round at a noisy table.
   // `injuries` on a side means casualties that side SUFFERED, so the ones a
   // coach inflicted are the opponent's.
   const forKey = mine === 'a' ? 'aScore' : 'bScore'
@@ -212,18 +217,18 @@ export function MyBoard({
           onChange={(v) => push({ ...live, [againstKey]: v })}
         />
         <Step
-          label="Removals suffered"
-          value={live[sufferedKey]}
-          tone="cas"
-          disabled={disabled || locked}
-          onChange={(v) => push({ ...live, [sufferedKey]: v })}
-        />
-        <Step
           label="Removals inflicted"
           value={live[inflictedKey]}
           tone="cas"
           disabled={disabled || locked}
           onChange={(v) => push({ ...live, [inflictedKey]: v })}
+        />
+        <Step
+          label="Removals suffered"
+          value={live[sufferedKey]}
+          tone="cas"
+          disabled={disabled || locked}
+          onChange={(v) => push({ ...live, [sufferedKey]: v })}
         />
       </div>
 
