@@ -4,6 +4,7 @@ import {
   outlookForResult,
   resultOf,
   type Board,
+  type CasualtyMode,
   type Kickoff,
   type Outlook,
   type Period,
@@ -61,6 +62,10 @@ function asCount(value: unknown): number {
 function normalise(payload: any): Round {
   return {
     rostersProvisional: payload.rostersProvisional === true,
+    // Anything unrecognised reads as removals, the meaning the app had before
+    // the setting existed.
+    casualtyMode: payload.casualtyMode === 'players' ? 'players' : 'removals',
+    openCoordinator: payload.openCoordinator === true,
     scout: payload.scout ?? null,
     tournaments: payload.tournaments ?? [],
     activeTournamentId: payload.activeTournamentId,
@@ -183,7 +188,12 @@ export interface Identity {
   email: string | null
   name: string | null
   nafNumber: number | null
+  /** The role actually held, from coach_identity. Opens the Settings tab. */
   isAdmin: boolean
+  /** The role in force — held, or lent by open coordinator mode. */
+  canCoordinate: boolean
+  /** True when the role is lent rather than held, so the app can say so. */
+  openCoordinator: boolean
   board: { id: number; side: 'a' | 'b'; opponent: string } | null
   /** False when ACCESS_AUD is unset, which weakens the check — see access.ts. */
   audChecked: boolean
@@ -217,9 +227,29 @@ export async function saveMyBoard(entry: MyBoardEntry): Promise<Round> {
   return normalise(await post('/api/my-board', entry))
 }
 
+/**
+ * Lends the coordinator's powers to everyone signed in, or takes them back.
+ *
+ * Only a real coordinator may call this — the server checks coach_identity
+ * rather than the role in force, so the switch cannot hold itself on.
+ */
+export async function setOpenCoordinator(openCoordinator: boolean): Promise<Round> {
+  return normalise(await post('/api/settings', { openCoordinator }))
+}
+
 /** Marks the line-up on screen as provisional, or confirms it. */
 export async function setProvisional(provisional: boolean): Promise<Round> {
   return normalise(await post('/api/provisional', { provisional }))
+}
+
+/**
+ * Switches how casualties read for every device in the hall.
+ *
+ * A real change clears the current round's casualties server-side, which is why
+ * the app asks first.
+ */
+export async function setCasualtyMode(casualtyMode: CasualtyMode): Promise<Round> {
+  return normalise(await post('/api/settings', { casualtyMode }))
 }
 
 export interface EnginePing {

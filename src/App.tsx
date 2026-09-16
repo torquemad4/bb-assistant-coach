@@ -7,27 +7,36 @@ import { FullscreenToggle } from './components/FullscreenToggle'
 import { WakeToggle } from './components/WakeToggle'
 import { ThemeToggle } from './components/ThemeToggle'
 import { MyBoard } from './components/MyBoard'
+import { Settings } from './components/Settings'
 import { useIdentity } from './state/useIdentity'
 import { useRound } from './state/useRound'
 
-type Tab = 'myboard' | 'dashboard' | 'prematch' | 'control'
+type Tab = 'myboard' | 'dashboard' | 'prematch' | 'control' | 'settings'
 
 export default function App() {
   const controller = useRound()
   const { round, connection, loadError, isDirty, reload } = controller
   const { identity, loaded: identityLoaded } = useIdentity()
 
-  // Match Control can rewrite every board, so it is the coordinator's alone —
-  // the server refuses a coach's write either way, but offering a control that
-  // will be refused is its own kind of wrong. My Board appears only for
-  // somebody who actually has one.
+  // Match Control can rewrite every board, so it needs the coordinator's role —
+  // held, or lent by open coordinator mode. The server decides the same way, so
+  // the tab is offered exactly when a write would be accepted: a control that
+  // will be refused is its own kind of wrong, and one that would be accepted
+  // should not be hidden.
+  //
+  // Settings is the exception, and deliberately so. It holds the switch that
+  // lends the role out, so it goes by the role actually held — otherwise the
+  // first person handed the role could keep it, and nobody could take it back.
+  //
+  // My Board appears only for somebody who actually has one.
   const tabs = useMemo(() => {
     const list: { id: Tab; label: string }[] = []
     if (identity.board) list.push({ id: 'myboard', label: 'My Board' })
     list.push({ id: 'dashboard', label: 'Dashboard' }, { id: 'prematch', label: 'Pre-Match' })
-    if (identity.isAdmin) list.push({ id: 'control', label: 'Match Control' })
+    if (identity.canCoordinate) list.push({ id: 'control', label: 'Match Control' })
+    if (identity.isAdmin) list.push({ id: 'settings', label: 'Settings' })
     return list
-  }, [identity.board, identity.isAdmin])
+  }, [identity.board, identity.canCoordinate, identity.isAdmin])
 
   // A coach opening this on their phone wants their own board, not the hall
   // dashboard. Only once identity has actually answered, or it would flick.
@@ -74,7 +83,7 @@ export default function App() {
           {/* Shared state: switching the round moves it for every device in the
               hall, so it is the coordinator's control. The server refuses anyone
               else, but a button that will be refused should not be there. */}
-          {identity.isAdmin && <Selectors {...controller} />}
+          {identity.canCoordinate && <Selectors {...controller} />}
 
           <div className="topbar__tools">
             <ThemeToggle />
@@ -126,7 +135,8 @@ export default function App() {
         {tab === 'myboard' && <MyBoard controller={controller} identity={identity} />}
         {tab === 'dashboard' && <Dashboard {...controller} />}
         {tab === 'prematch' && <PreMatch {...controller} />}
-        {tab === 'control' && identity.isAdmin && <ControlPanel {...controller} />}
+        {tab === 'control' && identity.canCoordinate && <ControlPanel {...controller} />}
+        {tab === 'settings' && identity.isAdmin && <Settings {...controller} />}
       </main>
     </div>
   )

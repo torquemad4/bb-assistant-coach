@@ -16,6 +16,10 @@ import type { Round } from '../types'
 export const SEED_ROUND: Round = {
   // The committed fixture is a stand-in by definition.
   rostersProvisional: true,
+  // The reading the app has always had; the offline fixture cannot know what a
+  // coordinator chose.
+  casualtyMode: 'removals',
+  openCoordinator: false,
   scout: null,
   // The offline fallback is a single unnamed tournament; the selectors have
   // nothing to switch between when the database cannot be reached.

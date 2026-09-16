@@ -25,7 +25,7 @@ export function Dashboard({ round, aggregate, aggregateRange }: RoundController)
             <strong>No boards in this round yet.</strong>
           </p>
           <p>
-            On Match Control, link a Tourplay tournament to import the draw, or add boards by hand.
+            In Settings, link a Tourplay tournament to import the draw, or add boards by hand on Match Control.
           </p>
         </div>
       ) : (
@@ -36,6 +36,7 @@ export function Dashboard({ round, aggregate, aggregateRange }: RoundController)
             board={board}
             countryA={round.teamA.country}
             countryB={round.teamB.country}
+            mode={round.casualtyMode}
           />
         ))}
       </div>

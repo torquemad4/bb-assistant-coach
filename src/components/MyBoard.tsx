@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { saveMyBoard, type Identity } from '../api'
+import { casualtyStep, casualtyView } from '../casualties'
 import type { RoundController } from '../state/useRound'
 import {
   OUTLOOK_MAX,
@@ -22,20 +23,35 @@ interface StepProps {
   label: string
   value: number
   tone?: 'score' | 'cas'
+  /** Both ends are given rather than inferred: in players-left mode the number
+   *  counts down from a full team, so neither end is where a count from zero
+   *  would put it. */
+  atMin?: boolean
+  atMax?: boolean
   disabled: boolean
-  onChange: (next: number) => void
+  /** Which way the coach pressed, not what the number becomes — the caller owns
+   *  the arithmetic, because in players-left mode "+" is one fewer casualty. */
+  onStep: (direction: 1 | -1) => void
 }
 
 /** A big two-button stepper. Sized for a thumb on a phone, not a mouse. */
-function Step({ label, value, tone = 'score', disabled, onChange }: StepProps) {
+function Step({
+  label,
+  value,
+  tone = 'score',
+  atMin = false,
+  atMax = false,
+  disabled,
+  onStep,
+}: StepProps) {
   return (
     <div className={`mb-step mb-step--${tone}`}>
       <span className="mb-step__label">{label}</span>
       <div className="mb-step__row">
         <button
           type="button"
-          onClick={() => onChange(Math.max(0, value - 1))}
-          disabled={disabled || value === 0}
+          onClick={() => onStep(-1)}
+          disabled={disabled || atMin}
           aria-label={`${label} down`}
         >
           −
@@ -43,8 +59,8 @@ function Step({ label, value, tone = 'score', disabled, onChange }: StepProps) {
         <output className="mb-step__value">{value}</output>
         <button
           type="button"
-          onClick={() => onChange(value + 1)}
-          disabled={disabled}
+          onClick={() => onStep(1)}
+          disabled={disabled || atMax}
           aria-label={`${label} up`}
         >
           +
@@ -181,6 +197,17 @@ export function MyBoard({
   const sufferedKey = mine === 'a' ? 'aInjuries' : 'bInjuries'
   const inflictedKey = mine === 'a' ? 'bInjuries' : 'aInjuries'
 
+  // Removals or players left, whichever the hall is on. In players mode the
+  // two numbers stop being something each coach did to the other and become
+  // what each side has on the pitch, so the labels change with them — and each
+  // side counts against its own squad, which is how a Snotling team gets 14.
+  const mode = round.casualtyMode
+  const players = mode === 'players'
+  const mySide = mine === 'a' ? board.a : board.b
+  const theirSide = mine === 'a' ? board.b : board.a
+  const sufferedView = casualtyView(live[sufferedKey], mySide.race, mode)
+  const inflictedView = casualtyView(live[inflictedKey], theirSide.race, mode)
+
   // Outlook is stored from team A's point of view. A coach sitting on side B
   // would otherwise see their own good position as a negative number.
   const myOutlook = (mine === 'a' ? live.outlook : -live.outlook) as Outlook
@@ -207,28 +234,36 @@ export function MyBoard({
         <Step
           label="TDs for"
           value={live[forKey]}
+          atMin={live[forKey] <= 0}
           disabled={disabled || locked}
-          onChange={(v) => push({ ...live, [forKey]: v })}
+          onStep={(d) => push({ ...live, [forKey]: Math.max(0, live[forKey] + d) })}
         />
         <Step
           label="TDs against"
           value={live[againstKey]}
+          atMin={live[againstKey] <= 0}
           disabled={disabled || locked}
-          onChange={(v) => push({ ...live, [againstKey]: v })}
+          onStep={(d) => push({ ...live, [againstKey]: Math.max(0, live[againstKey] + d) })}
         />
         <Step
-          label="Removals inflicted"
-          value={live[inflictedKey]}
+          label={players ? 'Their players left' : 'Removals inflicted'}
+          value={inflictedView.value}
           tone="cas"
+          atMin={inflictedView.atMin}
+          atMax={inflictedView.atMax}
           disabled={disabled || locked}
-          onChange={(v) => push({ ...live, [inflictedKey]: v })}
+          onStep={(d) =>
+            push({ ...live, [inflictedKey]: live[inflictedKey] + casualtyStep(d, mode) })
+          }
         />
         <Step
-          label="Removals suffered"
-          value={live[sufferedKey]}
+          label={players ? 'Your players left' : 'Removals suffered'}
+          value={sufferedView.value}
           tone="cas"
+          atMin={sufferedView.atMin}
+          atMax={sufferedView.atMax}
           disabled={disabled || locked}
-          onChange={(v) => push({ ...live, [sufferedKey]: v })}
+          onStep={(d) => push({ ...live, [sufferedKey]: live[sufferedKey] + casualtyStep(d, mode) })}
         />
       </div>
 

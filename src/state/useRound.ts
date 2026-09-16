@@ -9,6 +9,8 @@ import {
   moveBoard,
   pingScoutEngine,
   refreshScouting,
+  setCasualtyMode,
+  setOpenCoordinator,
   setProvisional,
   saveRound,
   setSyncMode,
@@ -27,6 +29,7 @@ import {
   outlookForResult,
   resultOf,
   type Board,
+  type CasualtyMode,
   type Kickoff,
   type Period,
   type Outlook,
@@ -111,6 +114,10 @@ export interface RoundController {
   pinging: boolean
   /** Mark the line-up on screen provisional, or confirm it. */
   setProvisional: (provisional: boolean) => void
+  /** Switches the casualty reading for everyone; clears the round's casualties. */
+  setCasualtyMode: (mode: CasualtyMode) => void
+  /** Lends the coordinator's powers to everyone signed in, or takes them back. */
+  setOpenCoordinator: (open: boolean) => void
   setKickoff: (boardId: number, kickoff: Kickoff) => void
   /** Throw away unsaved edits and go back to the last saved state. */
   discard: () => void
@@ -496,6 +503,29 @@ export function useRound(): RoundController {
     }
   }, [])
 
+  const applyCasualtyMode = useCallback(async (mode: CasualtyMode) => {
+    try {
+      // The server clears the round's casualties on a real change, so the whole
+      // round is adopted rather than the one field: the zeroed boards have to
+      // land on screen too, or the old numbers sit there looking entered.
+      const fresh = await setCasualtyMode(mode)
+      setRound(fresh)
+      setBaseline(fresh)
+    } catch (cause) {
+      setSaveError(cause instanceof Error ? cause.message : String(cause))
+    }
+  }, [])
+
+  const applyOpenCoordinator = useCallback(async (open: boolean) => {
+    try {
+      const fresh = await setOpenCoordinator(open)
+      setRound((current) => ({ ...current, openCoordinator: fresh.openCoordinator }))
+      setBaseline((current) => ({ ...current, openCoordinator: fresh.openCoordinator }))
+    } catch (cause) {
+      setSaveError(cause instanceof Error ? cause.message : String(cause))
+    }
+  }, [])
+
   const applyPing = useCallback(async () => {
     setPinging(true)
     try {
@@ -548,6 +578,8 @@ export function useRound(): RoundController {
     pingEngine: () => void applyPing(),
     pinging,
     setProvisional: (provisional: boolean) => void applyProvisional(provisional),
+    setCasualtyMode: (mode: CasualtyMode) => void applyCasualtyMode(mode),
+    setOpenCoordinator: (open: boolean) => void applyOpenCoordinator(open),
     discard,
     save: () => void save(),
     reload,

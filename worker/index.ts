@@ -22,6 +22,14 @@ import { pingEngine, pullScouting } from './scout'
 import { fetchMatchups, tableFromSnapshot, MATCHUP_MAX_AGE_MS, type MatchupPayload } from './matchups'
 import { identify } from './access'
 
+/**
+ * How casualties read on screen. Declared here rather than imported: the Worker
+ * compiles on its own and shares no module with the app. The two definitions
+ * are two lines of the same alternative — if one gains a third reading, the
+ * CHECK constraint in migration 0010 rejects it before the mismatch can matter.
+ */
+type CasualtyMode = 'removals' | 'players'
+
 export interface Env {
   DB: D1Database
   ASSETS: Fetcher
@@ -213,6 +221,8 @@ const TAGS = Object.keys(TAG_OUTLOOK)
 interface Active {
   tournament: TournamentRow
   round: RoundRow
+  casualtyMode: CasualtyMode
+  openCoordinator: boolean
 }
 
 /**
@@ -221,8 +231,15 @@ interface Active {
  */
 async function resolveActive(db: D1Database): Promise<Active | null> {
   const state = await db
-    .prepare('SELECT active_tournament_id, active_round_id FROM app_state WHERE id = 1')
-    .first<{ active_tournament_id: number | null; active_round_id: number | null }>()
+    .prepare(
+      'SELECT active_tournament_id, active_round_id, casualty_mode, open_coordinator FROM app_state WHERE id = 1',
+    )
+    .first<{
+      active_tournament_id: number | null
+      active_round_id: number | null
+      casualty_mode: string | null
+      open_coordinator: number | null
+    }>()
 
   let tournament = state?.active_tournament_id
     ? await db
@@ -253,7 +270,11 @@ async function resolveActive(db: D1Database): Promise<Active | null> {
   }
   if (!round) return null
 
-  return { tournament, round }
+  // Anything other than the one alternative reads as removals, so a value that
+  // predates this column or arrives corrupt fails safe to the original meaning.
+  const casualtyMode: CasualtyMode = state?.casualty_mode === 'players' ? 'players' : 'removals'
+
+  return { tournament, round, casualtyMode, openCoordinator: state?.open_coordinator === 1 }
 }
 
 async function setActive(db: D1Database, tournamentId: number, roundId: number) {
@@ -270,7 +291,7 @@ async function setActive(db: D1Database, tournamentId: number, roundId: number) 
 async function readState(db: D1Database) {
   const active = await resolveActive(db)
   if (!active) return null
-  const { tournament, round } = active
+  const { tournament, round, casualtyMode, openCoordinator } = active
 
   const scout = await db
     .prepare('SELECT payload, generated_at FROM scout WHERE round_id = ?')
@@ -301,6 +322,8 @@ async function readState(db: D1Database) {
     teamA: { name: tournament.team_a_name, country: tournament.team_a_country },
     teamB: { name: tournament.team_b_name, country: tournament.team_b_country },
     rostersProvisional: tournament.rosters_provisional === 1,
+    casualtyMode,
+    openCoordinator,
     boards: (boards.results as BoardRow[]).map(boardFromRow),
     // Parsed here so a corrupt blob fails once, on the server, rather than
     // throwing inside every viewer's render.
@@ -521,6 +544,25 @@ async function loadMatchups(
 }
 
 /**
+ * Is the hall running open, with everyone holding the coordinator's powers?
+ *
+ * Read on its own because the authorisation gate runs before any round is
+ * resolved, and a write must not be admitted on the strength of a flag nobody
+ * has looked up. A missing row or an unreadable value means closed: the safe
+ * answer is always the one that grants nothing.
+ */
+async function openCoordinatorMode(db: D1Database): Promise<boolean> {
+  try {
+    const row = await db
+      .prepare('SELECT open_coordinator FROM app_state WHERE id = 1')
+      .first<{ open_coordinator: number | null }>()
+    return row?.open_coordinator === 1
+  } catch {
+    return false
+  }
+}
+
+/**
  * Endpoints only the coordinator may call, checked in ONE place rather than
  * eleven. Scattered guards are how one endpoint ends up unguarded, and every
  * one of these can rewrite boards that are not the caller's.
@@ -536,6 +578,7 @@ const COORDINATOR_PATHS = new Set([
   '/api/sync-mode',
   '/api/link',
   '/api/board-order',
+  '/api/settings',
 ])
 
 export default {
@@ -548,7 +591,11 @@ export default {
     const writing = request.method !== 'GET' && request.method !== 'HEAD'
     if (writing && (COORDINATOR_PATHS.has(path) || path === '/api/round')) {
       const viewer = await resolveViewer(request, env)
-      if (!viewer.isAdmin) return notAllowed(viewer)
+      // Open mode lends the coordinator's powers to everyone signed in — but
+      // never over this endpoint, which is where the lending is switched off.
+      // A flag that could protect itself would be a one-way door.
+      const lent = path === '/api/settings' ? false : await openCoordinatorMode(env.DB)
+      if (!viewer.isAdmin && !lent) return notAllowed(viewer)
     }
 
     // ---- GET /api/me : who does this browser belong to? ----
@@ -585,12 +632,23 @@ export default {
         }
       }
 
+      const lent = await openCoordinatorMode(env.DB)
+
       return json({
         state: viewer.state,
         email: viewer.email,
         name: viewer.displayName,
         nafNumber: viewer.nafNumber,
+        // The real role, from coach_identity. It alone opens the Settings tab,
+        // because Settings holds the switch that lends the role out.
         isAdmin: viewer.isAdmin,
+        // The role in force right now, real or lent. This is what the app reads
+        // to decide whether to offer Match Control — a control that would be
+        // refused should not be on screen, and one that would be accepted
+        // should not be hidden.
+        canCoordinate: viewer.isAdmin || lent,
+        /** True when the powers are lent rather than held, so the app can say so. */
+        openCoordinator: lent,
         board,
         // Surfaced, not hidden: an unset ACCESS_AUD means a token minted for a
         // different Access app in the same account would also be accepted.
@@ -824,6 +882,55 @@ export default {
       await env.DB.prepare('UPDATE tournament SET rosters_provisional = ? WHERE id = ?')
         .bind(body.provisional ? 1 : 0, active.tournament.id)
         .run()
+      return json(await readState(env.DB))
+    }
+
+    // ---- POST /api/settings : how the hall reads its boards ----
+    if (path === '/api/settings') {
+      if (request.method !== 'POST') return json({ error: `${request.method} not allowed` }, 405)
+      let body: any
+      try {
+        body = await request.json()
+      } catch {
+        return json({ error: 'Body is not valid JSON' }, 400)
+      }
+      const wantsMode = body?.casualtyMode !== undefined
+      const wantsOpen = body?.openCoordinator !== undefined
+      if (!wantsMode && !wantsOpen) {
+        return json({ error: 'Nothing to set' }, 400)
+      }
+      if (wantsMode && body.casualtyMode !== 'removals' && body.casualtyMode !== 'players') {
+        return json({ error: "casualtyMode must be 'removals' or 'players'" }, 400)
+      }
+      if (wantsOpen && typeof body.openCoordinator !== 'boolean') {
+        return json({ error: 'openCoordinator must be a boolean' }, 400)
+      }
+      const active = await resolveActive(env.DB)
+      if (!active) return json({ error: 'No round is set up' }, 404)
+
+      const statements: D1PreparedStatement[] = []
+
+      // Changing the reading clears the round's casualties, which the app warns
+      // about and makes the coordinator confirm. The numbers already entered
+      // were counted under the other heading, and a 2 that silently becomes a 9
+      // is worse than a 0 somebody has to re-enter. A no-op change clears
+      // nothing, so a stray double-tap on the toggle cannot cost a round.
+      if (wantsMode && body.casualtyMode !== active.casualtyMode) {
+        statements.push(
+          env.DB
+            .prepare('UPDATE board SET a_injuries = 0, b_injuries = 0 WHERE round_id = ?')
+            .bind(active.round.id),
+          env.DB.prepare('UPDATE app_state SET casualty_mode = ? WHERE id = 1').bind(body.casualtyMode),
+        )
+      }
+      if (wantsOpen) {
+        statements.push(
+          env.DB
+            .prepare('UPDATE app_state SET open_coordinator = ? WHERE id = 1')
+            .bind(body.openCoordinator ? 1 : 0),
+        )
+      }
+      if (statements.length > 0) await env.DB.batch(statements)
       return json(await readState(env.DB))
     }
 

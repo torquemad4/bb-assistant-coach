@@ -14,6 +14,8 @@ const WATCHER: Identity = {
   name: null,
   nafNumber: null,
   isAdmin: false,
+  canCoordinate: false,
+  openCoordinator: false,
   board: null,
   audChecked: false,
   reason: null,

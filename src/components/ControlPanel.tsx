@@ -1,8 +1,8 @@
+import { casualtyStep, casualtyView, CASUALTY_LABEL } from '../casualties'
 import { RACE_TAG, type Race } from '../data/races'
 import { signed, toneOf } from '../format'
 import { Flag } from './Flag'
 import { Stepper } from './Stepper'
-import { TourplayPanel } from './TourplayPanel'
 import type { RoundController } from '../state/useRound'
 import {
   OUTLOOK_MAX,
@@ -25,6 +25,12 @@ interface RowProps {
 }
 
 function ControlRow({ board, controller, countryA, countryB }: RowProps) {
+  const mode = controller.round.casualtyMode
+  // Removals count up from nothing; players left counts down from a full team,
+  // and a press of "+" is one fewer casualty. Both readings come off the same
+  // stored number — see src/casualties.ts.
+  const casA = casualtyView(board.a.injuries, board.a.race, mode)
+  const casB = casualtyView(board.b.injuries, board.b.race, mode)
   const { nudgeOutlook, nudgeScore, nudgeInjuries, setPeriod, setKickoff, connection, dirtyBoardIds } =
     controller
   const locked = connection !== 'live'
@@ -61,7 +67,7 @@ function ControlRow({ board, controller, countryA, countryB }: RowProps) {
         </div>
       </div>
 
-      <div className="ctl-row__cell ctl-row__cell--pair">
+      <div className="ctl-row__cell ctl-row__cell--pair" data-label="TDs">
         <Stepper
           team="a"
           disabled={stateLocked}
@@ -80,26 +86,28 @@ function ControlRow({ board, controller, countryA, countryB }: RowProps) {
         />
       </div>
 
-      <div className="ctl-row__cell ctl-row__cell--pair">
+      <div className="ctl-row__cell ctl-row__cell--pair" data-label={CASUALTY_LABEL[mode]}>
         <Stepper
           team="a"
           disabled={stateLocked}
-          label={`board ${board.id} team A casualties`}
-          display={String(board.a.injuries)}
-          atMin={board.a.injuries === 0}
-          onStep={(d) => nudgeInjuries(board.id, 'A', d)}
+          label={`board ${board.id} team A ${CASUALTY_LABEL[mode].toLowerCase()}`}
+          display={String(casA.value)}
+          atMin={casA.atMin}
+          atMax={casA.atMax}
+          onStep={(d) => nudgeInjuries(board.id, 'A', casualtyStep(d, mode))}
         />
         <Stepper
           team="b"
           disabled={stateLocked}
-          label={`board ${board.id} team B casualties`}
-          display={String(board.b.injuries)}
-          atMin={board.b.injuries === 0}
-          onStep={(d) => nudgeInjuries(board.id, 'B', d)}
+          label={`board ${board.id} team B ${CASUALTY_LABEL[mode].toLowerCase()}`}
+          display={String(casB.value)}
+          atMin={casB.atMin}
+          atMax={casB.atMax}
+          onStep={(d) => nudgeInjuries(board.id, 'B', casualtyStep(d, mode))}
         />
       </div>
 
-      <div className="ctl-row__cell">
+      <div className="ctl-row__cell" data-label="Kick-off">
         <div className="halves halves--kick" role="group" aria-label={`Board ${board.id} kick-off`}>
           {(['K', 'R'] as const).map((side) => (
             <button
@@ -117,7 +125,7 @@ function ControlRow({ board, controller, countryA, countryB }: RowProps) {
         </div>
       </div>
 
-      <div className="ctl-row__cell">
+      <div className="ctl-row__cell" data-label="Period">
         <div className="halves halves--period" role="group" aria-label={`Board ${board.id} period`}>
           {PERIODS.map((period: Period) => (
             <button
@@ -138,7 +146,7 @@ function ControlRow({ board, controller, countryA, countryB }: RowProps) {
         </div>
       </div>
 
-      <div className="ctl-row__cell ctl-row__cell--outlook">
+      <div className="ctl-row__cell ctl-row__cell--outlook" data-label="Outlook">
         <Stepper
           arrows
           disabled={locked || ft}
@@ -168,7 +176,13 @@ export function ControlPanel(controller: RoundController) {
 
   return (
     <div className="control">
-      <TourplayPanel {...controller} />
+      {round.openCoordinator && (
+        <p className="control__open" role="status">
+          <strong>Everyone coordinates.</strong> Every board here is editable by anyone signed in,
+          and switching the round moves it for the whole hall. A coordinator can turn this off in
+          Settings.
+        </p>
+      )}
 
       <div className="control__bar">
         <p className="control__hint">
@@ -186,19 +200,6 @@ export function ControlPanel(controller: RoundController) {
           </span>
         </div>
         <div className="control__actions">
-          <button
-            type="button"
-            className={`control__provisional${round.rostersProvisional ? ' is-on' : ''}`}
-            onClick={() => controller.setProvisional(!round.rostersProvisional)}
-            disabled={connection !== 'live'}
-            title={
-              round.rostersProvisional
-                ? 'Confirm this line-up — removes the provisional banner'
-                : 'Mark this line-up as a stand-in, so nobody reads placeholder picks as real'
-            }
-          >
-            {round.rostersProvisional ? 'Confirm line-up' : 'Mark provisional'}
-          </button>
           <button
             type="button"
             className="control__reset"
@@ -238,7 +239,7 @@ export function ControlPanel(controller: RoundController) {
           Score {round.teamA.name} / {round.teamB.name}
         </span>
         <span>
-          Casualties {round.teamA.name} / {round.teamB.name}
+          {CASUALTY_LABEL[round.casualtyMode]} {round.teamA.name} / {round.teamB.name}
         </span>
         <span>Kick</span>
         <span>Period</span>

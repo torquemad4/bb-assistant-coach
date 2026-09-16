@@ -1,7 +1,15 @@
+import { casualtyView, CASUALTY_LABEL, CASUALTY_TAG } from '../casualties'
 import { RACE_TAG, type Race } from '../data/races'
 import { signed, toneOf } from '../format'
 import { Flag } from './Flag'
-import { TAG_LABEL, resultOf, type Board, type CountryCode, type Side } from '../types'
+import {
+  TAG_LABEL,
+  resultOf,
+  type Board,
+  type CasualtyMode,
+  type CountryCode,
+  type Side,
+} from '../types'
 
 function raceTag(race: string): string {
   return RACE_TAG[race as Race] ?? race.slice(0, 4).toUpperCase()
@@ -43,10 +51,12 @@ interface BoardCardProps {
   board: Board
   countryA: CountryCode | null
   countryB: CountryCode | null
+  /** How the casualty pair reads — the same choice the whole hall is on. */
+  mode: CasualtyMode
 }
 
 /** One vertical board column: coach A on top, score in the middle, coach B below. */
-export function BoardCard({ board, countryA, countryB }: BoardCardProps) {
+export function BoardCard({ board, countryA, countryB, mode }: BoardCardProps) {
   const tone = toneOf(board.outlook)
 
   // A finished match has nothing left to read but its result, so the card
@@ -88,12 +98,12 @@ export function BoardCard({ board, countryA, countryB }: BoardCardProps) {
       <SideRow side={board.b} team="b" country={countryB} />
 
       <footer className="board__foot">
-        <div className="cas" aria-label="Casualties suffered">
-          <span className="cas__label">CAS</span>
+        <div className="cas" aria-label={CASUALTY_LABEL[mode]}>
+          <span className="cas__label">{CASUALTY_TAG[mode]}</span>
           <span className="cas__pair">
-            <span className="cas__value">{board.a.injuries}</span>
+            <span className="cas__value">{casualtyView(board.a.injuries, board.a.race, mode).value}</span>
             <span className="cas__sep">/</span>
-            <span className="cas__value">{board.b.injuries}</span>
+            <span className="cas__value">{casualtyView(board.b.injuries, board.b.race, mode).value}</span>
           </span>
         </div>
         <div className={`outlook outlook--${tone}`} aria-label="Match outlook">

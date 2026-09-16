@@ -128,7 +128,22 @@ export interface RoundSummary {
   roundNumber: number
 }
 
+/**
+ * How casualties read on screen. See `src/casualties.ts` — the stored number is
+ * always casualties suffered either way.
+ */
+export type CasualtyMode = 'removals' | 'players'
+
+export const CASUALTY_MODES: readonly CasualtyMode[] = ['removals', 'players']
+
 export interface Round {
+  /** How the casualty numbers read on screen, for every device in the hall. */
+  casualtyMode: CasualtyMode
+  /**
+   * True while everyone signed in holds the coordinator's powers. A real grant,
+   * not a display setting — see migration 0011.
+   */
+  openCoordinator: boolean
   /**
    * True while the line-up is a stand-in — coaches or races that may still
    * change. Placeholder races look exactly like real ones on screen, and
