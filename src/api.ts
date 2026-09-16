@@ -204,6 +204,8 @@ export interface MyBoardEntry {
   bInjuries: number
   period: Period
   kickoff: Kickoff
+  /** Always team A's point of view, as stored. The view flips it for side B. */
+  outlook: Outlook
 }
 
 /**

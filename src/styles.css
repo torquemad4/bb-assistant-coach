@@ -2467,6 +2467,81 @@ h1 {
   color: var(--down);
 }
 
+/* The coach's own read on their board. Tinted by which way it leans, because
+   at a glance the sign matters more than the digit. */
+.mb-outlook {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  border-radius: var(--radius);
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+}
+
+.mb-outlook--up { border-color: var(--up); }
+.mb-outlook--down { border-color: var(--down); }
+
+.mb-outlook__label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--ink-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.mb-outlook__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mb-outlook__row button {
+  flex: 0 0 auto;
+  min-width: 72px;
+  min-height: var(--tap);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--bg-sunken);
+  color: var(--ink);
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.mb-outlook__row button:disabled {
+  color: var(--ink-disabled);
+  cursor: default;
+}
+
+.mb-outlook__value {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+
+.mb-outlook__number {
+  font-size: 1.7rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.mb-outlook--up .mb-outlook__number { color: var(--up); }
+.mb-outlook--down .mb-outlook__number { color: var(--down); }
+
+.mb-outlook__word {
+  font-size: 0.72rem;
+  color: var(--ink-dim);
+  text-align: center;
+}
+
+.mb-outlook__note {
+  font-size: 0.72rem;
+  color: var(--ink-faint);
+}
+
 .mb__row {
   display: flex;
   align-items: center;

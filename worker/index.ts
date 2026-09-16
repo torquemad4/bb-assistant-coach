@@ -650,11 +650,22 @@ export default {
       }
       const kickoff = body?.kickoff === 'K' || body?.kickoff === 'R' ? body.kickoff : null
 
-      // Full time settles the outlook from the score, exactly as it does for
-      // the coordinator — and leaving FT hands it back, so a mistake can be
-      // undone rather than needing someone else to fix it.
-      const outlook =
-        period === 'FT' ? (aScore > bScore ? 1 : aScore < bScore ? -1 : 0) : board.outlook
+      // A coach reads their own board — Karl's call on 15 Sep, revising the
+      // original split where outlook was the coordinator's alone. Sent from the
+      // team A point of view, as it is stored, so the client does the flipping
+      // for a coach sitting on side B.
+      let outlook = board.outlook
+      if (body?.outlook !== undefined) {
+        if (!OUTLOOKS.includes(body.outlook)) {
+          return json({ error: `outlook must be one of ${OUTLOOKS.join(', ')}` }, 400)
+        }
+        outlook = body.outlook
+      }
+
+      // Full time settles it from the score regardless, exactly as it does for
+      // the coordinator — and leaving FT hands the reading back, so a mistake
+      // can be undone rather than needing someone else to fix it.
+      if (period === 'FT') outlook = aScore > bScore ? 1 : aScore < bScore ? -1 : 0
 
       await env.DB.batch([
         env.DB.prepare(

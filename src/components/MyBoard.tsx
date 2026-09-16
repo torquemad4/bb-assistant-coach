@@ -1,7 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { saveMyBoard, type Identity } from '../api'
 import type { RoundController } from '../state/useRound'
-import { PERIODS, resultOf, type Kickoff, type Period } from '../types'
+import {
+  OUTLOOK_MAX,
+  OUTLOOK_MIN,
+  OUTLOOK_STEP,
+  PERIODS,
+  resultOf,
+  type Kickoff,
+  type Outlook,
+  type Period,
+} from '../types'
 
 /** How long after the last tap the entry is sent. Long enough to coalesce a
  *  run of taps on the same stepper, short enough to feel immediate. */
@@ -47,6 +56,20 @@ function Step({ label, value, tone = 'score', disabled, onChange }: StepProps) {
 
 const PERIOD_LABEL: Record<Period, string> = { '1': '1st half', '2': '2nd half', FT: 'Full time' }
 
+/** The coach's own read on their board, in words rather than a bare number. */
+const OUTLOOK_WORD: Record<string, string> = {
+  '-1': 'Losing it',
+  '-0.5': 'Under the cosh',
+  '0': 'Line ball',
+  '0.5': 'On top',
+  '1': 'Winning it',
+}
+
+function clampOutlook(value: number): Outlook {
+  const stepped = Math.round(value / OUTLOOK_STEP) * OUTLOOK_STEP
+  return Math.min(OUTLOOK_MAX, Math.max(OUTLOOK_MIN, stepped)) as Outlook
+}
+
 /**
  * A coach's own board, on their own phone.
  *
@@ -77,6 +100,7 @@ export function MyBoard({
     bInjuries: number
     period: Period
     kickoff: Kickoff
+    outlook: Outlook
   } | null>(null)
   const timer = useRef<number | null>(null)
 
@@ -90,6 +114,7 @@ export function MyBoard({
         bInjuries: board.b.injuries,
         period: board.period,
         kickoff: board.kickoff,
+        outlook: board.outlook,
       }
     : null)
 
@@ -141,6 +166,21 @@ export function MyBoard({
 
   const mine = seat.side
   const locked = live.period === 'FT'
+
+  // The whole page speaks in the coach's own terms — for and against, suffered
+  // and inflicted — so the team A / team B pairs are resolved once, here.
+  // `injuries` on a side means casualties that side SUFFERED, so the ones a
+  // coach inflicted are the opponent's.
+  const forKey = mine === 'a' ? 'aScore' : 'bScore'
+  const againstKey = mine === 'a' ? 'bScore' : 'aScore'
+  const sufferedKey = mine === 'a' ? 'aInjuries' : 'bInjuries'
+  const inflictedKey = mine === 'a' ? 'bInjuries' : 'aInjuries'
+
+  // Outlook is stored from team A's point of view. A coach sitting on side B
+  // would otherwise see their own good position as a negative number.
+  const myOutlook = (mine === 'a' ? live.outlook : -live.outlook) as Outlook
+  const setMyOutlook = (next: Outlook) =>
+    push({ ...live, outlook: (mine === 'a' ? next : -next) as Outlook })
   const disabled = connection !== 'live'
   const result = resultOf({
     a: { ...board.a, score: live.aScore },
@@ -160,31 +200,65 @@ export function MyBoard({
 
       <div className="mb__scores">
         <Step
-          label={mine === 'a' ? 'Your TDs' : `${seat.opponent} TDs`}
-          value={live.aScore}
+          label="TDs for"
+          value={live[forKey]}
           disabled={disabled || locked}
-          onChange={(aScore) => push({ ...live, aScore })}
+          onChange={(v) => push({ ...live, [forKey]: v })}
         />
         <Step
-          label={mine === 'b' ? 'Your TDs' : `${seat.opponent} TDs`}
-          value={live.bScore}
+          label="TDs against"
+          value={live[againstKey]}
           disabled={disabled || locked}
-          onChange={(bScore) => push({ ...live, bScore })}
+          onChange={(v) => push({ ...live, [againstKey]: v })}
         />
         <Step
-          label={mine === 'a' ? 'Your CAS' : 'Their CAS'}
-          value={live.aInjuries}
+          label="Removals suffered"
+          value={live[sufferedKey]}
           tone="cas"
           disabled={disabled || locked}
-          onChange={(aInjuries) => push({ ...live, aInjuries })}
+          onChange={(v) => push({ ...live, [sufferedKey]: v })}
         />
         <Step
-          label={mine === 'b' ? 'Your CAS' : 'Their CAS'}
-          value={live.bInjuries}
+          label="Removals inflicted"
+          value={live[inflictedKey]}
           tone="cas"
           disabled={disabled || locked}
-          onChange={(bInjuries) => push({ ...live, bInjuries })}
+          onChange={(v) => push({ ...live, [inflictedKey]: v })}
         />
+      </div>
+
+      {/* Sits with the scores because it changes as often as they do, and
+          because it is the same question: how is this board going. Locked at
+          full time, where the result has settled it. */}
+      <div className={`mb-outlook mb-outlook--${myOutlook > 0 ? 'up' : myOutlook < 0 ? 'down' : 'level'}`}>
+        <span className="mb-outlook__label">Your read</span>
+        <div className="mb-outlook__row">
+          <button
+            type="button"
+            onClick={() => setMyOutlook(clampOutlook(myOutlook - OUTLOOK_STEP))}
+            disabled={disabled || locked || myOutlook <= OUTLOOK_MIN}
+            aria-label="Your read, worse"
+          >
+            −
+          </button>
+          <span className="mb-outlook__value">
+            <output className="mb-outlook__number">
+              {myOutlook > 0 ? `+${myOutlook.toFixed(1)}` : myOutlook.toFixed(1)}
+            </output>
+            <span className="mb-outlook__word">{OUTLOOK_WORD[String(myOutlook)]}</span>
+          </span>
+          <button
+            type="button"
+            onClick={() => setMyOutlook(clampOutlook(myOutlook + OUTLOOK_STEP))}
+            disabled={disabled || locked || myOutlook >= OUTLOOK_MAX}
+            aria-label="Your read, better"
+          >
+            +
+          </button>
+        </div>
+        {locked && (
+          <span className="mb-outlook__note">Settled by the result at full time.</span>
+        )}
       </div>
 
       <div className="mb__row" role="group" aria-label="Kick-off">
