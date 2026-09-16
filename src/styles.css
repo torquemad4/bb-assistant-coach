@@ -219,7 +219,20 @@ h1 {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-.topbar {
+/*
+ * The header is one bar with four groups in it — title, round selectors, screen
+ * tools, tabs — and on anything tablet-sized up that is exactly what it is:
+ * `.frame` is the bar, and the two wrappers inside it dissolve with
+ * `display: contents` so all four groups sit in the same flex flow. That is
+ * what keeps the single row at 1194px and the wrapped rows at 1024px.
+ *
+ * On a phone the roles swap (see the phone block further down): `.frame`
+ * dissolves instead, `.topbar` and `.tabbar` become boxes of their own, and the
+ * tab strip pins to the top while the rest scrolls away. It has to be that way
+ * round — a sticky box cannot escape its parent, so the tabs could never pin
+ * past a header they were still inside.
+ */
+.frame {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -228,6 +241,11 @@ h1 {
   padding: 10px clamp(12px, 1.5vw, 20px);
   background: var(--bg-raised);
   border-bottom: 1px solid var(--line);
+}
+
+.topbar,
+.tabbar {
+  display: contents;
 }
 
 .topbar__sub {
@@ -1186,6 +1204,86 @@ h1 {
 
   .ctl-row__cell--pair {
     flex-direction: row;
+  }
+}
+
+/*
+ * A phone scrolls the page, not a pane inside it.
+ *
+ * Everywhere else the app is a fixed-height shell with one scrolling stage, and
+ * that is right for a tablet propped on a table all day: the frame never moves.
+ * On a phone the same frame costs 342 of 880 pixels before a single score is
+ * visible, and scrolling inside a short pane with a tall fixed header above it
+ * is the "stuck in the screen" feeling. So here the document scrolls and only
+ * the tabs stay: the title, the round tools and the provisional band scroll
+ * away like the content they are, and a coach can still change tab without
+ * scrolling back up.
+ *
+ * The height clause catches a phone turned sideways: 412 pixels of viewport with
+ * a 145-pixel frame on top is the same problem, and it is the shape of the
+ * screen rather than its width that causes it. No tablet is that short.
+ */
+@media (max-width: 700px), (max-height: 520px) {
+  /* The document is the scroller, so nothing above it may be pinned to the
+     viewport height — a fixed height here is what makes the page unable to
+     grow past one screen. */
+  html,
+  body,
+  #root {
+    height: auto;
+    min-height: 100%;
+  }
+
+  .app {
+    height: auto;
+  }
+
+  /* Roles swap: the bar dissolves, its two halves become boxes. */
+  .frame {
+    display: contents;
+  }
+
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 10px 12px;
+    background: var(--bg-raised);
+  }
+
+  .tabbar {
+    display: block;
+    position: sticky;
+    top: 0;
+    /* Above the cards and the provisional band, which now pass underneath. */
+    z-index: 20;
+    padding: 0 12px 8px;
+    background: var(--bg-raised);
+    border-bottom: 1px solid var(--line);
+  }
+
+  /* Four tabs at 412px are wider than the screen once a coordinator is looking;
+     one bar that scrolls sideways beats two rows of pinned buttons eating the
+     height this whole change is about. */
+  .tabs {
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tabs__btn {
+    flex: none;
+  }
+
+  /* The stage no longer scrolls on its own; it is just the tail of the page. */
+  .stage {
+    flex: none;
+    overflow: visible;
   }
 }
 

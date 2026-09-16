@@ -33,7 +33,16 @@ export default function App() {
   // dashboard. Only once identity has actually answered, or it would flick.
   const [chosen, setChosen] = useState<Tab | null>(null)
   const tab: Tab = chosen ?? (identityLoaded && identity.board ? 'myboard' : 'dashboard')
-  const setTab = setChosen
+
+  const setTab = (next: Tab) => {
+    setChosen(next)
+    // A view should start at its top. Worth doing explicitly because the phone
+    // scrolls the page while the tablet scrolls the stage, so whichever one is
+    // carrying the scroll, changing tab would otherwise drop you into the
+    // middle of the new view at the old view's offset.
+    window.scrollTo({ top: 0 })
+    document.querySelector('.stage')?.scrollTo({ top: 0 })
+  }
 
   if (connection === 'loading') {
     return (
@@ -45,39 +54,50 @@ export default function App() {
 
   return (
     <div className="app">
-      <header className="topbar">
-        <div className="topbar__title">
-          <h1>Round Coordinator</h1>
-          <p className="topbar__sub">
-            Round {round.roundNumber} of {round.totalRounds} · {round.boards.length} boards live
-            {isDirty && <span className="topbar__dirty">unsaved changes</span>}
-          </p>
+      {/* One bar on a tablet, two stacked pieces on a phone. The split is real
+          rather than cosmetic: on a phone the tab strip stays pinned while the
+          title, tools and provisional band scroll away, and a sticky element
+          cannot escape its parent's box — so the piece that pins has to be a
+          box of its own, outside the one that scrolls off. `.frame` dissolves
+          on whichever side does not need it, which is how the tablet keeps the
+          single row it has today. */}
+      <header className="frame">
+        <div className="topbar">
+          <div className="topbar__title">
+            <h1>Round Coordinator</h1>
+            <p className="topbar__sub">
+              Round {round.roundNumber} of {round.totalRounds} · {round.boards.length} boards live
+              {isDirty && <span className="topbar__dirty">unsaved changes</span>}
+            </p>
+          </div>
+
+          {/* Shared state: switching the round moves it for every device in the
+              hall, so it is the coordinator's control. The server refuses anyone
+              else, but a button that will be refused should not be there. */}
+          {identity.isAdmin && <Selectors {...controller} />}
+
+          <div className="topbar__tools">
+            <ThemeToggle />
+            <WakeToggle />
+            <FullscreenToggle />
+          </div>
         </div>
 
-        {/* Shared state: switching the round moves it for every device in the
-            hall, so it is the coordinator's control. The server refuses anyone
-            else, but a button that will be refused should not be there. */}
-        {identity.isAdmin && <Selectors {...controller} />}
-
-        <div className="topbar__tools">
-          <ThemeToggle />
-          <WakeToggle />
-          <FullscreenToggle />
+        <div className="tabbar">
+          <nav className="tabs" aria-label="Views">
+            {tabs.map((entry) => (
+              <button
+                key={entry.id}
+                type="button"
+                className={`tabs__btn${tab === entry.id ? ' is-active' : ''}`}
+                onClick={() => setTab(entry.id)}
+                aria-current={tab === entry.id}
+              >
+                {entry.label}
+              </button>
+            ))}
+          </nav>
         </div>
-
-        <nav className="tabs" aria-label="Views">
-          {tabs.map((entry) => (
-            <button
-              key={entry.id}
-              type="button"
-              className={`tabs__btn${tab === entry.id ? ' is-active' : ''}`}
-              onClick={() => setTab(entry.id)}
-              aria-current={tab === entry.id}
-            >
-              {entry.label}
-            </button>
-          ))}
-        </nav>
       </header>
 
       {connection === 'offline' && (
