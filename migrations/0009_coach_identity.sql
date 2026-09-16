@@ -27,8 +27,12 @@ CREATE TABLE coach_identity (
 -- Karl (Torquemada) is a COACH. He holds the coordinator role only while the
 -- app is being tested; see the demotion note on the Notion page. Both changes
 -- go together when the handover happens.
+--
+-- GreenskinPhil is a coordinator AND a coach. The two are independent: admin
+-- decides what he may change, the NAF number decides whether he has a board of
+-- his own. He gets My Board and Match Control both.
 INSERT INTO coach_identity (email, naf_number, display_name, is_admin) VALUES
   ('mfsecades@gmail.com',      NULL,  'mefspores', 1),
   ('csainzmartinez@gmail.com', 31866, 'Torquemada', 1),
-  ('greenskinphil@gmail.com',  31674, 'GreenskinPhil', 0),
+  ('greenskinphil@gmail.com',  31674, 'GreenskinPhil', 1),
   ('twilight.hour@gmail.com',  28239, 'Thulean', 0);
