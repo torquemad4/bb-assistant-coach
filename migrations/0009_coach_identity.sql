@@ -31,8 +31,12 @@ CREATE TABLE coach_identity (
 -- GreenskinPhil is a coordinator AND a coach. The two are independent: admin
 -- decides what he may change, the NAF number decides whether he has a board of
 -- his own. He gets My Board and Match Control both.
+-- Everyone below with a NAF number and no admin flag is a plain coach: My Board
+-- for their own pairing, read-only everywhere else.
 INSERT INTO coach_identity (email, naf_number, display_name, is_admin) VALUES
   ('mfsecades@gmail.com',      NULL,  'mefspores', 1),
   ('csainzmartinez@gmail.com', 31866, 'Torquemada', 1),
   ('greenskinphil@gmail.com',  31674, 'GreenskinPhil', 1),
-  ('twilight.hour@gmail.com',  28239, 'Thulean', 0);
+  ('twilight.hour@gmail.com',  28239, 'Thulean', 0),
+  ('ukmastersbb@gmail.com',    5290,  'Pipey', 0),
+  ('a.ashtonbutt@gmail.com',   32021, 'Bashto', 0);
