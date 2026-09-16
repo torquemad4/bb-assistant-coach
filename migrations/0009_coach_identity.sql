@@ -19,7 +19,16 @@ CREATE TABLE coach_identity (
 );
 
 -- Emails are stored lower-case; the Worker lower-cases before comparing.
+--
+-- mefspores is England's technical staff and the intended main coordinator. No
+-- NAF number: a coordinator who is not playing has no board, and the app is
+-- built to allow that — she sees every tab except My Board.
+--
+-- Karl (Torquemada) is a COACH. He holds the coordinator role only while the
+-- app is being tested; see the demotion note on the Notion page. Both changes
+-- go together when the handover happens.
 INSERT INTO coach_identity (email, naf_number, display_name, is_admin) VALUES
+  ('mfsecades@gmail.com',      NULL,  'mefspores', 1),
   ('csainzmartinez@gmail.com', 31866, 'Torquemada', 1),
   ('greenskinphil@gmail.com',  31674, 'GreenskinPhil', 0),
   ('twilight.hour@gmail.com',  28239, 'Thulean', 0);
