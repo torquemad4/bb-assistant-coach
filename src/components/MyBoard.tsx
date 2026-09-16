@@ -22,7 +22,7 @@ type Status = 'idle' | 'saving' | 'saved' | 'failed'
 interface StepProps {
   label: string
   value: number
-  tone?: 'score' | 'cas'
+  tone?: 'score' | 'cas' | 'left'
   /** Both ends are given rather than inferred: in players-left mode the number
    *  counts down from a full team, so neither end is where a count from zero
    *  would put it. */
@@ -245,26 +245,64 @@ export function MyBoard({
           disabled={disabled || locked}
           onStep={(d) => push({ ...live, [againstKey]: Math.max(0, live[againstKey] + d) })}
         />
-        <Step
-          label={players ? 'Their players left' : 'Removals inflicted'}
-          value={inflictedView.value}
-          tone="cas"
-          atMin={inflictedView.atMin}
-          atMax={inflictedView.atMax}
-          disabled={disabled || locked}
-          onStep={(d) =>
-            push({ ...live, [inflictedKey]: live[inflictedKey] + casualtyStep(d, mode) })
-          }
-        />
-        <Step
-          label={players ? 'Your players left' : 'Removals suffered'}
-          value={sufferedView.value}
-          tone="cas"
-          atMin={sufferedView.atMin}
-          atMax={sufferedView.atMax}
-          disabled={disabled || locked}
-          onStep={(d) => push({ ...live, [sufferedKey]: live[sufferedKey] + casualtyStep(d, mode) })}
-        />
+        {/* The pair swaps round with the mode, because the two readings are
+            about different things. Removals are something one coach does to
+            the other, so the left column is what this coach did — inflicted,
+            then suffered. Players left is a count of your own side still
+            standing, so your own team comes first and the opponent second.
+            Either way the coach's own business is the one they reach for
+            most, and it is in the same place they last left it. */}
+        {players ? (
+          <>
+            <Step
+              label="Your players left"
+              value={sufferedView.value}
+              tone="left"
+              atMin={sufferedView.atMin}
+              atMax={sufferedView.atMax}
+              disabled={disabled || locked}
+              onStep={(d) =>
+                push({ ...live, [sufferedKey]: live[sufferedKey] + casualtyStep(d, mode) })
+              }
+            />
+            <Step
+              label="Their players left"
+              value={inflictedView.value}
+              tone="left"
+              atMin={inflictedView.atMin}
+              atMax={inflictedView.atMax}
+              disabled={disabled || locked}
+              onStep={(d) =>
+                push({ ...live, [inflictedKey]: live[inflictedKey] + casualtyStep(d, mode) })
+              }
+            />
+          </>
+        ) : (
+          <>
+            <Step
+              label="Removals inflicted"
+              value={inflictedView.value}
+              tone="cas"
+              atMin={inflictedView.atMin}
+              atMax={inflictedView.atMax}
+              disabled={disabled || locked}
+              onStep={(d) =>
+                push({ ...live, [inflictedKey]: live[inflictedKey] + casualtyStep(d, mode) })
+              }
+            />
+            <Step
+              label="Removals suffered"
+              value={sufferedView.value}
+              tone="cas"
+              atMin={sufferedView.atMin}
+              atMax={sufferedView.atMax}
+              disabled={disabled || locked}
+              onStep={(d) =>
+                push({ ...live, [sufferedKey]: live[sufferedKey] + casualtyStep(d, mode) })
+              }
+            />
+          </>
+        )}
       </div>
 
       {/* Sits with the scores because it changes as often as they do, and

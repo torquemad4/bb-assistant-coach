@@ -2650,6 +2650,9 @@ h1 {
   font-variant-numeric: tabular-nums;
 }
 
+/* Red reads as "this went wrong", which is right for a removal taken and wrong
+   for a count of players still on the pitch — eleven standing is not a warning.
+   So the players-left tone keeps the ordinary ink. */
 .mb-step--cas .mb-step__value {
   color: var(--down);
 }
