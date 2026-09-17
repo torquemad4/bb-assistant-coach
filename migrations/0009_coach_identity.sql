@@ -40,4 +40,8 @@ INSERT INTO coach_identity (email, naf_number, display_name, is_admin) VALUES
   ('twilight.hour@gmail.com',  28239, 'Thulean', 0),
   ('ukmastersbb@gmail.com',    5290,  'Pipey', 0),
   ('a.ashtonbutt@gmail.com',   32021, 'Bashto', 0),
-  ('foged.1510@gmail.com',     10691, 'Kfoged', 0);
+  ('foged.1510@gmail.com',     10691, 'Kfoged', 0),
+  -- EurOpen squad. A coach is matched to a board by NAF number in whichever
+  -- round is on screen, so this row is dormant while the Eurobowl is showing
+  -- and live when the EurOpen is.
+  ('thehexbaron@gmail.com',    32494, 'HexBaron', 0);
