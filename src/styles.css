@@ -1190,8 +1190,19 @@ h1 {
    * seeing the whole round at once is the entire point of this view; one board
    * per row would read better and show three.
    */
-  .boards {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .boards,
+  .boards[data-count='1'],
+  .boards[data-count='2'],
+  .boards[data-count='3'],
+  .boards[data-count='4'] {
+    /* The small-count rule centres cards at a fixed 220px, which is right on a
+       tablet with room to spare and wrong on a phone, where it strands four
+       boards in a column down the middle and wastes half the screen. Here they
+       take the width they are given: two up, or one when that is all there is.
+       Listed against the same attribute selectors because a bare `.boards`
+       loses to them. */
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    justify-content: stretch;
     grid-auto-rows: min-content;
     min-height: 0;
   }
