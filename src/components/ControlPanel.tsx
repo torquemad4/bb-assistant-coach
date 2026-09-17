@@ -26,7 +26,7 @@ interface RowProps {
 
 function ControlRow({ board, controller, countryA, countryB }: RowProps) {
   const mode = controller.round.casualtyMode
-  // Removals count up from nothing; players left counts down from a full team,
+  // Removals count up from nothing; players on pitch counts down from a full team,
   // and a press of "+" is one fewer casualty. Both readings come off the same
   // stored number — see src/casualties.ts.
   const casA = casualtyView(board.a.injuries, board.a.race, mode)

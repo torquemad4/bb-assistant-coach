@@ -95,7 +95,7 @@ function ProvisionalRow({ controller, offline }: RowProps) {
 }
 
 /**
- * Removals or players left.
+ * Removals or players on pitch.
  *
  * The confirmation is the point of this control rather than an afterthought:
  * the numbers already on the boards were counted under the other heading, so
@@ -112,7 +112,7 @@ function CasualtyRow({ controller, offline }: RowProps) {
       state={
         mode === 'removals'
           ? 'Counting removals — how many players have been taken off.'
-          : `Counting players left — starting at ${SQUAD_DEFAULT}, and ${SQUAD_SNOTLING} for a Snotling team.`
+          : `Counting players on pitch — starting at ${SQUAD_DEFAULT}, and ${SQUAD_SNOTLING} for a Snotling team.`
       }
       detail={
         'Both readings come from the same stored number, so switching does not rewrite any ' +

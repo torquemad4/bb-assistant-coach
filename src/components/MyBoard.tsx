@@ -22,15 +22,15 @@ type Status = 'idle' | 'saving' | 'saved' | 'failed'
 interface StepProps {
   label: string
   value: number
-  tone?: 'score' | 'cas' | 'left'
-  /** Both ends are given rather than inferred: in players-left mode the number
+  tone?: 'score' | 'cas' | 'pitch'
+  /** Both ends are given rather than inferred: in players-on-pitch mode the number
    *  counts down from a full team, so neither end is where a count from zero
    *  would put it. */
   atMin?: boolean
   atMax?: boolean
   disabled: boolean
   /** Which way the coach pressed, not what the number becomes — the caller owns
-   *  the arithmetic, because in players-left mode "+" is one fewer casualty. */
+   *  the arithmetic, because on pitch counts "+" is one fewer casualty. */
   onStep: (direction: 1 | -1) => void
 }
 
@@ -197,7 +197,7 @@ export function MyBoard({
   const sufferedKey = mine === 'a' ? 'aInjuries' : 'bInjuries'
   const inflictedKey = mine === 'a' ? 'bInjuries' : 'aInjuries'
 
-  // Removals or players left, whichever the hall is on. In players mode the
+  // Removals or players on pitch, whichever the hall is on. In players mode the
   // two numbers stop being something each coach did to the other and become
   // what each side has on the pitch, so the labels change with them — and each
   // side counts against its own squad, which is how a Snotling team gets 14.
@@ -248,16 +248,16 @@ export function MyBoard({
         {/* The pair swaps round with the mode, because the two readings are
             about different things. Removals are something one coach does to
             the other, so the left column is what this coach did — inflicted,
-            then suffered. Players left is a count of your own side still
+            then suffered. Players on pitch is a count of your own side still
             standing, so your own team comes first and the opponent second.
             Either way the coach's own business is the one they reach for
             most, and it is in the same place they last left it. */}
         {players ? (
           <>
             <Step
-              label="Your players left"
+              label="Your players on pitch"
               value={sufferedView.value}
-              tone="left"
+              tone="pitch"
               atMin={sufferedView.atMin}
               atMax={sufferedView.atMax}
               disabled={disabled || locked}
@@ -266,9 +266,9 @@ export function MyBoard({
               }
             />
             <Step
-              label="Their players left"
+              label="Their players on pitch"
               value={inflictedView.value}
-              tone="left"
+              tone="pitch"
               atMin={inflictedView.atMin}
               atMax={inflictedView.atMax}
               disabled={disabled || locked}

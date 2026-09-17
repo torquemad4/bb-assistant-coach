@@ -39,4 +39,5 @@ INSERT INTO coach_identity (email, naf_number, display_name, is_admin) VALUES
   ('greenskinphil@gmail.com',  31674, 'GreenskinPhil', 1),
   ('twilight.hour@gmail.com',  28239, 'Thulean', 0),
   ('ukmastersbb@gmail.com',    5290,  'Pipey', 0),
-  ('a.ashtonbutt@gmail.com',   32021, 'Bashto', 0);
+  ('a.ashtonbutt@gmail.com',   32021, 'Bashto', 0),
+  ('foged.1510@gmail.com',     10691, 'Kfoged', 0);

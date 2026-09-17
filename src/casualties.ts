@@ -1,10 +1,10 @@
 import type { CasualtyMode } from './types'
 
 /**
- * Reading a board's casualties as removals taken, or as players still standing.
+ * Reading a board's casualties as removals taken, or as players still on the pitch.
  *
  * The stored number is always casualties suffered — that is what Tourplay feeds
- * and what a finished round means forever. Players left is a reading applied on
+ * and what a finished round means forever. Players on pitch is a reading applied on
  * top: squad size − casualties. Keeping it that way round means switching the
  * mode never rewrites history, and a round entered last week still makes sense
  * under either heading.
@@ -45,7 +45,7 @@ export interface CasualtyView {
  * What to show for one side, and which ends of the range are spent.
  *
  * Removals are left uncapped, as they have always been. The cap belongs to the
- * players-left reading, where a team cannot field more than its squad.
+ * players-on-pitch reading, where a team cannot field more than its squad.
  */
 export function casualtyView(
   injuries: number,
@@ -73,11 +73,11 @@ export function casualtyStep(direction: 1 | -1, mode: CasualtyMode): 1 | -1 {
 /** Wording for the pair of numbers, wherever they are labelled. */
 export const CASUALTY_LABEL: Record<CasualtyMode, string> = {
   removals: 'Removals',
-  players: 'Players left',
+  players: 'Players on pitch',
 }
 
 /** The short form, for the dashboard card where there is no room for words. */
 export const CASUALTY_TAG: Record<CasualtyMode, string> = {
   removals: 'CAS',
-  players: 'LEFT',
+  players: 'PITCH',
 }
