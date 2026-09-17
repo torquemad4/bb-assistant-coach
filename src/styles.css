@@ -3118,3 +3118,171 @@ h1 {
     flex: none;
   }
 }
+
+/* ---------- the owner's admin panel ---------- */
+
+/*
+ * Opened rarely, between events rather than during one, and every control here
+ * changes what somebody else can do. So it is plain, wordy where it needs to be,
+ * and nothing is a one-tap surprise.
+ */
+.admin {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.admin__group {
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px clamp(12px, 1.5vw, 18px);
+}
+
+.admin__heading {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.admin__lede {
+  margin: 6px 0 12px;
+  max-width: 70ch;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--ink-faint);
+}
+
+.admin__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.admin__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 10px 12px;
+  background: var(--bg-raised);
+}
+
+.admin__row-text {
+  min-width: 0;
+}
+
+.admin__name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  font-weight: 650;
+}
+
+/* Says which row is you, since the owner cannot change their own. */
+.admin__owner {
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-sunken);
+  border: 1px solid var(--line);
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+
+.admin__meta {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.74rem;
+  color: var(--ink-faint);
+  overflow-wrap: anywhere;
+}
+
+.admin__toggle {
+  flex: none;
+  min-height: var(--tap);
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--bg-sunken);
+  color: var(--ink-dim);
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* On means this person or event is doing something right now. */
+.admin__toggle.is-on {
+  border-color: var(--up);
+  color: var(--up);
+}
+
+.admin__toggle:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.admin__error {
+  margin: 0;
+  padding: 10px 12px;
+  background: var(--down-soft);
+  border: 1px solid var(--down);
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--ink);
+}
+
+.admin__note {
+  margin: 0;
+  max-width: 70ch;
+  font-size: 0.76rem;
+  line-height: 1.5;
+  color: var(--ink-faint);
+}
+
+/* A tournament nobody may change reads as a caption, not a dead control. */
+.sel__fixed {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.sel__fixed-name {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 700px) {
+  .admin {
+    overflow: visible;
+    flex: none;
+  }
+
+  .admin__row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .admin__toggle {
+    width: 100%;
+  }
+}

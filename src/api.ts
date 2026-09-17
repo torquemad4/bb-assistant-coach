@@ -11,6 +11,47 @@ import {
   type Round,
 } from './types'
 
+/**
+ * Which tournament this device is looking at.
+ *
+ * Per device rather than per hall: two people can be on different tournaments
+ * at the same moment, which is the whole point of them being independent. Kept
+ * in localStorage so a reload does not bounce a coordinator back, and sent as
+ * `?t=` on every call so one value decides both what is read and what is
+ * written. The server still has the last word — a coach whose own tournament is
+ * live is held to it whatever this says.
+ */
+const TOURNAMENT_KEY = 'bb-coordinator-tournament'
+
+let chosenTournament: number | null = (() => {
+  try {
+    const raw = Number(localStorage.getItem(TOURNAMENT_KEY))
+    return Number.isInteger(raw) && raw > 0 ? raw : null
+  } catch {
+    return null
+  }
+})()
+
+export function currentTournament(): number | null {
+  return chosenTournament
+}
+
+export function chooseTournament(id: number | null) {
+  chosenTournament = id
+  try {
+    if (id == null) localStorage.removeItem(TOURNAMENT_KEY)
+    else localStorage.setItem(TOURNAMENT_KEY, String(id))
+  } catch {
+    /* a device that will not remember still works for this session */
+  }
+}
+
+/** Appends the chosen tournament, so every request agrees on which one it means. */
+function scoped(path: string): string {
+  if (chosenTournament == null) return path
+  return `${path}${path.includes('?') ? '&' : '?'}t=${chosenTournament}`
+}
+
 /** The mutable half of a board — the only fields a save is allowed to write. */
 export interface SaveBoard {
   id: number
@@ -66,6 +107,7 @@ function normalise(payload: any): Round {
     // the setting existed.
     casualtyMode: payload.casualtyMode === 'players' ? 'players' : 'removals',
     openCoordinator: payload.openCoordinator === true,
+    tournamentLocked: payload.tournamentLocked === true,
     scout: payload.scout ?? null,
     tournaments: payload.tournaments ?? [],
     activeTournamentId: payload.activeTournamentId,
@@ -104,13 +146,13 @@ async function errorFrom(response: Response): Promise<string> {
 }
 
 export async function fetchRound(signal?: AbortSignal): Promise<Round> {
-  const response = await fetch('/api/round', { signal, headers: { accept: 'application/json' } })
+  const response = await fetch(scoped('/api/round'), { signal, headers: { accept: 'application/json' } })
   if (!response.ok) throw new Error(await errorFrom(response))
   return normalise(await response.json())
 }
 
 export async function saveRound(boards: Board[]): Promise<Round> {
-  const response = await fetch('/api/round', {
+  const response = await fetch(scoped('/api/round'), {
     method: 'PUT',
     headers: { 'content-type': 'application/json', accept: 'application/json' },
     body: JSON.stringify({ boards: boards.map(toSaveBoard) }),
@@ -138,7 +180,7 @@ export interface LinkPreview {
 }
 
 async function post(path: string, body?: unknown): Promise<any> {
-  const response = await fetch(path, {
+  const response = await fetch(scoped(path), {
     method: 'POST',
     headers: { 'content-type': 'application/json', accept: 'application/json' },
     body: body === undefined ? undefined : JSON.stringify(body),
@@ -182,6 +224,43 @@ export async function createTournament(name: string): Promise<Round> {
   return normalise(await post('/api/tournaments', { name }))
 }
 
+/** What the owner's Admin panel shows. */
+export interface AdminState {
+  people: {
+    email: string
+    nafNumber: number | null
+    name: string | null
+    isAdmin: boolean
+    isOwner: boolean
+    addedAt: string | null
+  }[]
+  tournaments: { id: number; name: string; isActive: boolean; coaches: number }[]
+}
+
+export async function fetchAdmin(): Promise<AdminState> {
+  const response = await fetch('/api/admin', { headers: { accept: 'application/json' } })
+  if (!response.ok) throw new Error(await errorFrom(response))
+  return response.json()
+}
+
+/** Grants or removes the coordinator role. Owner only, enforced server-side. */
+export async function setRole(email: string, isAdmin: boolean): Promise<AdminState> {
+  return post('/api/admin', { action: 'role', email, isAdmin })
+}
+
+/**
+ * Makes a tournament live, or stands it down.
+ *
+ * Refused with a 409 naming the clash when a coach in it is already live
+ * somewhere else — a coach can only be held to one tournament at a time.
+ */
+export async function setTournamentActive(
+  tournamentId: number,
+  isActive: boolean,
+): Promise<AdminState> {
+  return post('/api/admin', { action: 'active', tournamentId, isActive })
+}
+
 /** Who Cloudflare Access says this browser belongs to. */
 export interface Identity {
   state: 'local' | 'verified' | 'rejected'
@@ -190,6 +269,13 @@ export interface Identity {
   nafNumber: number | null
   /** The role actually held, from coach_identity. Opens the Settings tab. */
   isAdmin: boolean
+  /** Owns the app: the Admin panel. Separate axis from coordinating. */
+  isOwner: boolean
+  /** The tournament this viewer is on, and whether they may change it. */
+  tournamentId: number | null
+  tournamentLocked: boolean
+  /** What the dropdown may offer them. */
+  tournaments: { id: number; name: string; isActive: boolean }[]
   /** The role in force — held, or lent by open coordinator mode. */
   canCoordinate: boolean
   /** True when the role is lent rather than held, so the app can say so. */
@@ -201,7 +287,7 @@ export interface Identity {
 }
 
 export async function fetchIdentity(signal?: AbortSignal): Promise<Identity> {
-  const response = await fetch('/api/me', { signal, headers: { accept: 'application/json' } })
+  const response = await fetch(scoped('/api/me'), { signal, headers: { accept: 'application/json' } })
   if (!response.ok) throw new Error(await errorFrom(response))
   return response.json()
 }
@@ -261,7 +347,7 @@ export interface EnginePing {
 
 /** Asks whether the Scout engine is answering, without pulling anything. */
 export async function pingScoutEngine(): Promise<EnginePing> {
-  const response = await fetch('/api/scout/ping', { headers: { accept: 'application/json' } })
+  const response = await fetch(scoped('/api/scout/ping'), { headers: { accept: 'application/json' } })
   if (!response.ok) throw new Error(await errorFrom(response))
   return response.json()
 }

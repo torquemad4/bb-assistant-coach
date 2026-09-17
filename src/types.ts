@@ -120,6 +120,8 @@ export interface TournamentSummary {
   name: string
   slug: string | null
   syncEnabled: boolean
+  /** Live now, rather than set up and waiting. */
+  isActive: boolean
 }
 
 /** One round within a tournament. */
@@ -137,8 +139,13 @@ export type CasualtyMode = 'removals' | 'players'
 export const CASUALTY_MODES: readonly CasualtyMode[] = ['removals', 'players']
 
 export interface Round {
-  /** How the casualty numbers read on screen, for every device in the hall. */
+  /** How the casualty numbers read on screen. The tournament's own, not global. */
   casualtyMode: CasualtyMode
+  /**
+   * True when this viewer may not change tournament — a coach whose own
+   * tournament is live is held to it.
+   */
+  tournamentLocked: boolean
   /**
    * True while everyone signed in holds the coordinator's powers. A real grant,
    * not a display setting — see migration 0011.

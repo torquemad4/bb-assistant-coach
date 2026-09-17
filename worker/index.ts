@@ -51,7 +51,14 @@ interface Viewer {
   email: string | null
   displayName: string | null
   nafNumber: number | null
+  /** May run a round: Match Control, Settings, the selectors. */
   isAdmin: boolean
+  /**
+   * Owns the app: the Admin panel, which sets everyone else's role and decides
+   * which tournaments are live. A separate axis from `isAdmin` so that handing
+   * the coordinator role over does not hand over the ability to take it back.
+   */
+  isOwner: boolean
   audChecked: boolean
   reason: string | null
 }
@@ -72,18 +79,25 @@ async function resolveViewer(request: Request, env: Env): Promise<Viewer> {
       email: null,
       displayName: null,
       nafNumber: null,
-      // Off Access entirely (local dev) the developer is the coordinator.
+      // Off Access entirely (local dev) the developer is the coordinator, and
+      // the owner too — otherwise the Admin panel could never be worked on.
       isAdmin: access.state === 'local',
+      isOwner: access.state === 'local',
       audChecked: false,
       reason: access.reason,
     }
   }
 
   const row = await env.DB.prepare(
-    'SELECT naf_number, display_name, is_admin FROM coach_identity WHERE email = ?',
+    'SELECT naf_number, display_name, is_admin, is_owner FROM coach_identity WHERE email = ?',
   )
     .bind(access.claims.email)
-    .first<{ naf_number: number | null; display_name: string | null; is_admin: number }>()
+    .first<{
+      naf_number: number | null
+      display_name: string | null
+      is_admin: number
+      is_owner: number
+    }>()
 
   return {
     state: 'verified',
@@ -91,9 +105,18 @@ async function resolveViewer(request: Request, env: Env): Promise<Viewer> {
     displayName: row?.display_name ?? null,
     nafNumber: row?.naf_number ?? null,
     isAdmin: row?.is_admin === 1,
+    isOwner: row?.is_owner === 1,
     audChecked: access.claims.audChecked,
     reason: null,
   }
+}
+
+/** The refusal anyone but the owner gets from the Admin panel. */
+function notOwner(viewer: Viewer): Response {
+  if (viewer.state === 'rejected') {
+    return json({ error: viewer.reason ?? 'Your Access session could not be checked' }, 403)
+  }
+  return json({ error: 'The Admin panel belongs to the app owner.' }, 403)
 }
 
 /** The refusal a non-coordinator gets from a coordinator-only endpoint. */
@@ -143,6 +166,12 @@ interface TournamentRow {
   team_b_name: string
   team_b_country: string
   updated_at: string
+  /** Live now, rather than set up and waiting. See migration 0012. */
+  is_active: number
+  /** Which round of THIS tournament is showing. */
+  active_round_id: number | null
+  casualty_mode: string | null
+  open_coordinator: number | null
 }
 
 interface RoundRow {
@@ -227,28 +256,100 @@ interface Active {
 }
 
 /**
+ * Which tournaments this coach belongs to, and which of those are live.
+ *
+ * Membership is derived from the boards rather than kept in a list of its own:
+ * a coach is in a tournament because their NAF number is on one of its boards.
+ * Nothing to maintain, and it cannot disagree with the roster. The cost is that
+ * a tournament with no draw imported yet has nobody in it, which is right —
+ * there is nothing for them to look at.
+ */
+async function tournamentsForCoach(
+  db: D1Database,
+  nafNumber: number | null,
+): Promise<{ id: number; isActive: boolean }[]> {
+  if (nafNumber == null) return []
+  const rows = await db
+    .prepare(
+      `SELECT DISTINCT t.id AS id, t.is_active AS is_active
+         FROM board b
+         JOIN round r ON b.round_id = r.id
+         JOIN tournament t ON r.tournament_id = t.id
+        WHERE b.a_naf_number = ? OR b.b_naf_number = ?
+        ORDER BY t.id`,
+    )
+    .bind(nafNumber, nafNumber)
+    .all<{ id: number; is_active: number }>()
+  return (rows.results ?? []).map((r) => ({ id: r.id, isActive: r.is_active === 1 }))
+}
+
+/**
+ * Which tournament this viewer is looking at, and whether they may change it.
+ *
+ * The rule Karl set: a coach with a live tournament is LOCKED to it — at an
+ * event you are playing in one thing, and the screen should not be able to
+ * wander off it. A coach with none may pick among the ones they belong to.
+ * Whoever runs the event is not a coach for this purpose: a coordinator and the
+ * owner see everything and choose freely, because somebody has to be able to
+ * look at the other hall.
+ *
+ * `wanted` is the viewer's own choice, carried per device rather than stored,
+ * so two people can be on different tournaments at the same moment. It is
+ * honoured only where the rules allow it.
+ */
+async function tournamentForViewer(
+  db: D1Database,
+  viewer: Viewer,
+  wanted: number | null,
+): Promise<{ id: number | null; locked: boolean; choices: number[] }> {
+  if (viewer.isAdmin || viewer.isOwner) {
+    const all = await db.prepare('SELECT id FROM tournament ORDER BY id').all<{ id: number }>()
+    const ids = (all.results ?? []).map((r) => r.id)
+    const active = await db
+      .prepare('SELECT id FROM tournament WHERE is_active = 1 ORDER BY id LIMIT 1')
+      .first<{ id: number }>()
+    const pick = wanted != null && ids.includes(wanted) ? wanted : active?.id ?? ids[0] ?? null
+    return { id: pick, locked: false, choices: ids }
+  }
+
+  const mine = await tournamentsForCoach(db, viewer.nafNumber)
+  const live = mine.find((t) => t.isActive)
+  if (live) return { id: live.id, locked: true, choices: [live.id] }
+
+  const ids = mine.map((t) => t.id)
+  if (ids.length > 0) {
+    const pick = wanted != null && ids.includes(wanted) ? wanted : ids[0]
+    return { id: pick, locked: ids.length === 1, choices: ids }
+  }
+
+  // A watcher, or a coach with no boards anywhere: show whatever is live so the
+  // app is not blank, and let them look but not choose.
+  const active = await db
+    .prepare('SELECT id FROM tournament WHERE is_active = 1 ORDER BY id LIMIT 1')
+    .first<{ id: number }>()
+  return { id: active?.id ?? null, locked: true, choices: [] }
+}
+
+/**
  * Resolves what is on screen, healing the pointers if they have gone stale —
  * a deleted round or a fresh database should not leave the app with nothing.
+ *
+ * `forTournament` names which tournament to resolve; without it the first live
+ * one is used, then simply the first, so a fresh database still renders.
  */
-async function resolveActive(db: D1Database): Promise<Active | null> {
-  const state = await db
-    .prepare(
-      'SELECT active_tournament_id, active_round_id, casualty_mode, open_coordinator FROM app_state WHERE id = 1',
-    )
-    .first<{
-      active_tournament_id: number | null
-      active_round_id: number | null
-      casualty_mode: string | null
-      open_coordinator: number | null
-    }>()
-
-  let tournament = state?.active_tournament_id
-    ? await db
-        .prepare('SELECT * FROM tournament WHERE id = ?')
-        .bind(state.active_tournament_id)
-        .first<TournamentRow>()
+async function resolveActive(
+  db: D1Database,
+  forTournament?: number | null,
+): Promise<Active | null> {
+  let tournament = forTournament
+    ? await db.prepare('SELECT * FROM tournament WHERE id = ?').bind(forTournament).first<TournamentRow>()
     : null
 
+  if (!tournament) {
+    tournament = await db
+      .prepare('SELECT * FROM tournament WHERE is_active = 1 ORDER BY id LIMIT 1')
+      .first<TournamentRow>()
+  }
   if (!tournament) {
     tournament = await db
       .prepare('SELECT * FROM tournament ORDER BY id LIMIT 1')
@@ -256,10 +357,10 @@ async function resolveActive(db: D1Database): Promise<Active | null> {
   }
   if (!tournament) return null
 
-  let round = state?.active_round_id
+  let round = tournament.active_round_id
     ? await db
         .prepare('SELECT * FROM round WHERE id = ? AND tournament_id = ?')
-        .bind(state.active_round_id, tournament.id)
+        .bind(tournament.active_round_id, tournament.id)
         .first<RoundRow>()
     : null
 
@@ -273,24 +374,39 @@ async function resolveActive(db: D1Database): Promise<Active | null> {
 
   // Anything other than the one alternative reads as removals, so a value that
   // predates this column or arrives corrupt fails safe to the original meaning.
-  const casualtyMode: CasualtyMode = state?.casualty_mode === 'players' ? 'players' : 'removals'
+  const casualtyMode: CasualtyMode = tournament.casualty_mode === 'players' ? 'players' : 'removals'
 
-  return { tournament, round, casualtyMode, openCoordinator: state?.open_coordinator === 1 }
+  return { tournament, round, casualtyMode, openCoordinator: tournament.open_coordinator === 1 }
 }
 
+/**
+ * Points a tournament at one of its own rounds.
+ *
+ * Was a single global pointer; now each tournament carries its own, so moving
+ * the Eurobowl to round 3 leaves the EurOpen exactly where it was. `app_state`
+ * is still written so that anything not yet migrated keeps working, but nothing
+ * reads it for this any more.
+ */
 async function setActive(db: D1Database, tournamentId: number, roundId: number) {
-  await db
-    .prepare(
-      `INSERT INTO app_state (id, active_tournament_id, active_round_id) VALUES (1, ?, ?)
-         ON CONFLICT(id) DO UPDATE SET active_tournament_id = ?, active_round_id = ?`,
-    )
-    .bind(tournamentId, roundId, tournamentId, roundId)
-    .run()
+  await db.batch([
+    db
+      .prepare('UPDATE tournament SET active_round_id = ? WHERE id = ?')
+      .bind(roundId, tournamentId),
+    db
+      .prepare(
+        `INSERT INTO app_state (id, active_tournament_id, active_round_id) VALUES (1, ?, ?)
+           ON CONFLICT(id) DO UPDATE SET active_tournament_id = ?, active_round_id = ?`,
+      )
+      .bind(tournamentId, roundId, tournamentId, roundId),
+  ])
 }
 
 /** The whole payload the app needs: the selectors plus the round on screen. */
-async function readState(db: D1Database) {
-  const active = await resolveActive(db)
+async function readState(
+  db: D1Database,
+  view: { id: number | null; locked: boolean; choices: number[] },
+) {
+  const active = await resolveActive(db, view.id)
   if (!active) return null
   const { tournament, round, casualtyMode, openCoordinator } = active
 
@@ -299,8 +415,14 @@ async function readState(db: D1Database) {
     .bind(round.id)
     .first<{ payload: string; generated_at: string | null }>()
 
+  // Only the tournaments this viewer may look at, so the selector cannot offer
+  // somebody else's event. A coordinator's `choices` is every tournament.
+  const visible = view.choices.length ? view.choices : [tournament.id]
   const [tournaments, rounds, boards] = await db.batch<any>([
-    db.prepare('SELECT id, name, tourplay_slug, sync_enabled FROM tournament ORDER BY id'),
+    db.prepare(
+      `SELECT id, name, tourplay_slug, sync_enabled, is_active FROM tournament
+        WHERE id IN (${visible.map(() => '?').join(',')}) ORDER BY id`,
+    ).bind(...visible),
     db
       .prepare('SELECT id, round_number FROM round WHERE tournament_id = ? ORDER BY round_number')
       .bind(tournament.id),
@@ -313,8 +435,11 @@ async function readState(db: D1Database) {
       name: t.name,
       slug: t.tourplay_slug,
       syncEnabled: t.sync_enabled === 1,
+      isActive: t.is_active === 1,
     })),
     activeTournamentId: tournament.id,
+    /** True when this viewer may not change tournament. */
+    tournamentLocked: view.locked,
     rounds: (rounds.results as any[]).map((r) => ({ id: r.id, roundNumber: r.round_number })),
     activeRoundId: round.id,
 
@@ -336,6 +461,44 @@ async function readState(db: D1Database) {
       syncEnabled: tournament.sync_enabled === 1,
       lastSyncedAt: tournament.last_synced_at,
     },
+  }
+}
+
+/**
+ * Everything the Admin panel shows: who is on the roster, and every tournament
+ * with the count of coaches it would lock.
+ */
+async function adminState(db: D1Database) {
+  const [people, tournaments] = await db.batch<any>([
+    db.prepare(
+      `SELECT email, naf_number, display_name, is_admin, is_owner, added_at
+         FROM coach_identity ORDER BY is_owner DESC, is_admin DESC, display_name`,
+    ),
+    db.prepare(
+      `SELECT t.id, t.name, t.is_active,
+              (SELECT COUNT(DISTINCT c.email)
+                 FROM coach_identity c
+                 JOIN board b ON (b.a_naf_number = c.naf_number OR b.b_naf_number = c.naf_number)
+                 JOIN round r ON b.round_id = r.id
+                WHERE r.tournament_id = t.id) AS coaches
+         FROM tournament t ORDER BY t.id`,
+    ),
+  ])
+  return {
+    people: (people.results as any[]).map((p) => ({
+      email: p.email,
+      nafNumber: p.naf_number,
+      name: p.display_name,
+      isAdmin: p.is_admin === 1,
+      isOwner: p.is_owner === 1,
+      addedAt: p.added_at,
+    })),
+    tournaments: (tournaments.results as any[]).map((t) => ({
+      id: t.id,
+      name: t.name,
+      isActive: t.is_active === 1,
+      coaches: t.coaches,
+    })),
   }
 }
 
@@ -552,10 +715,12 @@ async function loadMatchups(
  * has looked up. A missing row or an unreadable value means closed: the safe
  * answer is always the one that grants nothing.
  */
-async function openCoordinatorMode(db: D1Database): Promise<boolean> {
+async function openCoordinatorMode(db: D1Database, tournamentId: number | null): Promise<boolean> {
+  if (tournamentId == null) return false
   try {
     const row = await db
-      .prepare('SELECT open_coordinator FROM app_state WHERE id = 1')
+      .prepare('SELECT open_coordinator FROM tournament WHERE id = ?')
+      .bind(tournamentId)
       .first<{ open_coordinator: number | null }>()
     return row?.open_coordinator === 1
   } catch {
@@ -587,28 +752,48 @@ export default {
     const url = new URL(request.url)
     const path = url.pathname
 
-    // Reading is open to anyone Access let through; writing is not. Resolved
-    // only for writes, so the ten-second poll costs no crypto.
+    // What a screen shows now depends on who is looking, so the viewer is
+    // resolved for every request rather than only for writes. The signature
+    // check is a cached-key RSA verify; the ten-second poll can afford it.
+    const viewer = await resolveViewer(request, env)
+
+    // The viewer's own choice of tournament, carried in the query string so it
+    // is per device — two people can be on different tournaments at once — and
+    // so a POST does not have to spend its single body read on it.
+    const askedFor = Number(url.searchParams.get('t'))
+    const view = await tournamentForViewer(
+      env.DB,
+      viewer,
+      Number.isInteger(askedFor) && askedFor > 0 ? askedFor : null,
+    )
+
     const writing = request.method !== 'GET' && request.method !== 'HEAD'
     if (writing && (COORDINATOR_PATHS.has(path) || path === '/api/round')) {
-      const viewer = await resolveViewer(request, env)
       // Open mode lends the coordinator's powers to everyone signed in — but
-      // never over this endpoint, which is where the lending is switched off.
-      // A flag that could protect itself would be a one-way door.
-      const lent = path === '/api/settings' ? false : await openCoordinatorMode(env.DB)
+      // never over these two endpoints, which are where the lending is switched
+      // off and where roles are set. A flag that could protect itself would be
+      // a one-way door.
+      const guarded = path === '/api/settings' || path === '/api/admin'
+      const lent = guarded ? false : await openCoordinatorMode(env.DB, view.id)
       if (!viewer.isAdmin && !lent) return notAllowed(viewer)
     }
+
+    // The Admin panel is the owner's alone, read and write. It is the one place
+    // that decides who may coordinate, so it cannot be reachable by a role it
+    // hands out.
+    if (path === '/api/admin' && !viewer.isOwner) return notOwner(viewer)
 
     // ---- GET /api/me : who does this browser belong to? ----
     if (path === '/api/me') {
       if (request.method !== 'GET') return json({ error: `${request.method} not allowed` }, 405)
-      const viewer = await resolveViewer(request, env)
 
-      // Which board, if any, in the round currently on screen. By NAF number,
-      // so re-pairing and board reordering both take care of themselves.
+      // Which board, if any, in the round this viewer is looking at. By NAF
+      // number, so re-pairing and board reordering both take care of
+      // themselves — and scoped to their own tournament, so a coach in the
+      // EurOpen is not told they have no board because the Eurobowl is up.
       let board: { id: number; side: 'a' | 'b'; opponent: string } | null = null
       if (viewer.nafNumber != null) {
-        const active = await resolveActive(env.DB)
+        const active = await resolveActive(env.DB, view.id)
         if (active) {
           const row = await env.DB.prepare(
             `SELECT board_no, a_naf_number, a_naf_name, b_naf_name
@@ -633,7 +818,19 @@ export default {
         }
       }
 
-      const lent = await openCoordinatorMode(env.DB)
+      const lent = await openCoordinatorMode(env.DB, view.id)
+
+      // The tournaments this viewer may look at, named, so the dropdown can be
+      // drawn without a second request.
+      const choosable = view.choices.length
+        ? await env.DB.prepare(
+            `SELECT id, name, is_active FROM tournament WHERE id IN (${view.choices
+              .map(() => '?')
+              .join(',')}) ORDER BY id`,
+          )
+            .bind(...view.choices)
+            .all<{ id: number; name: string; is_active: number }>()
+        : { results: [] as { id: number; name: string; is_active: number }[] }
 
       return json({
         state: viewer.state,
@@ -650,6 +847,21 @@ export default {
         canCoordinate: viewer.isAdmin || lent,
         /** True when the powers are lent rather than held, so the app can say so. */
         openCoordinator: lent,
+        /** Owns the app: the Admin panel. Separate from coordinating. */
+        isOwner: viewer.isOwner,
+        /** The tournament this viewer is on. */
+        tournamentId: view.id,
+        /**
+         * True when they may not change it — a coach whose tournament is live
+         * is held to it, and a watcher has nothing to choose between.
+         */
+        tournamentLocked: view.locked,
+        /** What the dropdown may offer them. */
+        tournaments: (choosable.results ?? []).map((t) => ({
+          id: t.id,
+          name: t.name,
+          isActive: t.is_active === 1,
+        })),
         board,
         // Surfaced, not hidden: an unset ACCESS_AUD means a token minted for a
         // different Access app in the same account would also be accepted.
@@ -667,7 +879,7 @@ export default {
         return json({ error: 'You are not on the roster for this round.' }, 403)
       }
 
-      const active = await resolveActive(env.DB)
+      const active = await resolveActive(env.DB, view.id)
       if (!active) return json({ error: 'No round is set up' }, 404)
 
       // Tourplay owns match state while it is being followed; anything entered
@@ -738,7 +950,7 @@ export default {
         ),
       ])
 
-      return json(await readState(env.DB))
+      return json(await readState(env.DB, view))
     }
 
     // ---- POST /api/activate : switch tournament and/or round ----
@@ -751,7 +963,7 @@ export default {
         return json({ error: 'Body is not valid JSON' }, 400)
       }
 
-      const active = await resolveActive(env.DB)
+      const active = await resolveActive(env.DB, view.id)
       let tournamentId = Number(body?.tournamentId ?? active?.tournament.id)
       if (!Number.isInteger(tournamentId)) return json({ error: 'tournamentId must be a number' }, 400)
 
@@ -778,7 +990,9 @@ export default {
       }
 
       await setActive(env.DB, tournamentId, roundId)
-      return json(await readState(env.DB))
+      // Answer with the tournament just switched to, not the one the request
+      // arrived on, or the selector appears to ignore the change.
+      return json(await readState(env.DB, { ...view, id: tournamentId }))
     }
 
     // ---- POST /api/tournaments : create an empty tournament ----
@@ -816,7 +1030,7 @@ export default {
         .first<{ id: number }>()
 
       await setActive(env.DB, inserted!.id, round!.id)
-      return json(await readState(env.DB))
+      return json(await readState(env.DB, view))
     }
 
     // ---- POST /api/tag : mark a board Swing / Anchor / Bonus ----
@@ -829,7 +1043,7 @@ export default {
         return json({ error: 'Body is not valid JSON' }, 400)
       }
 
-      const active = await resolveActive(env.DB)
+      const active = await resolveActive(env.DB, view.id)
       if (!active) return json({ error: 'No round is set up' }, 404)
 
       const boardId = Number(body?.boardId)
@@ -844,7 +1058,7 @@ export default {
       // tag or the outlook it seeded.
       if (body?.locked === false) {
         await env.DB.prepare('UPDATE board SET tag_locked = 0 WHERE id = ?').bind(board.id).run()
-        return json(await readState(env.DB))
+        return json(await readState(env.DB, view))
       }
 
       const tag = body?.tag
@@ -852,7 +1066,7 @@ export default {
         await env.DB.prepare('UPDATE board SET tag = NULL, tag_locked = 0 WHERE id = ?')
           .bind(board.id)
           .run()
-        return json(await readState(env.DB))
+        return json(await readState(env.DB, view))
       }
 
       if (typeof tag !== 'string' || !TAGS.includes(tag)) {
@@ -863,7 +1077,7 @@ export default {
       await env.DB.prepare('UPDATE board SET tag = ?, tag_locked = 1, outlook = ? WHERE id = ?')
         .bind(tag, outlook, board.id)
         .run()
-      return json(await readState(env.DB))
+      return json(await readState(env.DB, view))
     }
 
     // ---- POST /api/provisional : mark the line-up provisional, or confirmed ----
@@ -878,12 +1092,12 @@ export default {
       if (typeof body?.provisional !== 'boolean') {
         return json({ error: 'provisional must be a boolean' }, 400)
       }
-      const active = await resolveActive(env.DB)
+      const active = await resolveActive(env.DB, view.id)
       if (!active) return json({ error: 'No round is set up' }, 404)
       await env.DB.prepare('UPDATE tournament SET rosters_provisional = ? WHERE id = ?')
         .bind(body.provisional ? 1 : 0, active.tournament.id)
         .run()
-      return json(await readState(env.DB))
+      return json(await readState(env.DB, view))
     }
 
     // ---- POST /api/settings : how the hall reads its boards ----
@@ -906,7 +1120,7 @@ export default {
       if (wantsOpen && typeof body.openCoordinator !== 'boolean') {
         return json({ error: 'openCoordinator must be a boolean' }, 400)
       }
-      const active = await resolveActive(env.DB)
+      const active = await resolveActive(env.DB, view.id)
       if (!active) return json({ error: 'No round is set up' }, 404)
 
       const statements: D1PreparedStatement[] = []
@@ -921,18 +1135,103 @@ export default {
           env.DB
             .prepare('UPDATE board SET a_injuries = 0, b_injuries = 0 WHERE round_id = ?')
             .bind(active.round.id),
-          env.DB.prepare('UPDATE app_state SET casualty_mode = ? WHERE id = 1').bind(body.casualtyMode),
+          env.DB
+            .prepare('UPDATE tournament SET casualty_mode = ? WHERE id = ?')
+            .bind(body.casualtyMode, active.tournament.id),
         )
       }
       if (wantsOpen) {
         statements.push(
           env.DB
-            .prepare('UPDATE app_state SET open_coordinator = ? WHERE id = 1')
-            .bind(body.openCoordinator ? 1 : 0),
+            .prepare('UPDATE tournament SET open_coordinator = ? WHERE id = ?')
+            .bind(body.openCoordinator ? 1 : 0, active.tournament.id),
         )
       }
       if (statements.length > 0) await env.DB.batch(statements)
-      return json(await readState(env.DB))
+      return json(await readState(env.DB, view))
+    }
+
+    // ---- /api/admin : the owner's panel — roles, and which events are live ----
+    //
+    // Gated above by `viewer.isOwner` for both read and write, because who may
+    // coordinate is decided here and a role must not be able to reach the place
+    // that grants it.
+    if (path === '/api/admin') {
+      if (request.method === 'GET') return json(await adminState(env.DB))
+      if (request.method !== 'POST') return json({ error: `${request.method} not allowed` }, 405)
+
+      let body: any
+      try {
+        body = await request.json()
+      } catch {
+        return json({ error: 'Body is not valid JSON' }, 400)
+      }
+
+      // --- set somebody's role ---
+      if (body?.action === 'role') {
+        const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''
+        if (!email) return json({ error: 'email is required' }, 400)
+        if (body.isAdmin !== true && body.isAdmin !== false) {
+          return json({ error: 'isAdmin must be a boolean' }, 400)
+        }
+        const row = await env.DB.prepare('SELECT email, is_owner FROM coach_identity WHERE email = ?')
+          .bind(email)
+          .first<{ email: string; is_owner: number }>()
+        if (!row) return json({ error: `${email} is not on the roster` }, 404)
+        await env.DB.prepare('UPDATE coach_identity SET is_admin = ? WHERE email = ?')
+          .bind(body.isAdmin ? 1 : 0, email)
+          .run()
+        return json(await adminState(env.DB))
+      }
+
+      // --- make a tournament live, or stand it down ---
+      if (body?.action === 'active') {
+        const id = Number(body.tournamentId)
+        if (!Number.isInteger(id)) return json({ error: 'tournamentId must be a number' }, 400)
+        if (body.isActive !== true && body.isActive !== false) {
+          return json({ error: 'isActive must be a boolean' }, 400)
+        }
+
+        if (body.isActive) {
+          // A coach may be in any number of tournaments but live in only one:
+          // being locked to two at once has no meaning, and the lock is what
+          // keeps a playing coach on their own boards. Refuse with the names,
+          // because "conflict" without the who is useless standing in a hall.
+          const clash = await env.DB
+            .prepare(
+              `SELECT DISTINCT t.name AS tournament, b2.a_naf_name AS name
+                 FROM board b1
+                 JOIN round r1 ON b1.round_id = r1.id
+                 JOIN board b2 ON (b2.a_naf_number = b1.a_naf_number OR b2.a_naf_number = b1.b_naf_number
+                                OR b2.b_naf_number = b1.a_naf_number OR b2.b_naf_number = b1.b_naf_number)
+                 JOIN round r2 ON b2.round_id = r2.id
+                 JOIN tournament t ON r2.tournament_id = t.id
+                WHERE r1.tournament_id = ? AND t.id != ? AND t.is_active = 1
+                LIMIT 5`,
+            )
+            .bind(id, id)
+            .all<{ tournament: string; name: string }>()
+          const clashes = clash.results ?? []
+          if (clashes.length > 0) {
+            const where = [...new Set(clashes.map((c) => c.tournament))].join(', ')
+            return json(
+              {
+                error:
+                  `Some of these coaches are already live in ${where}. ` +
+                  'A coach can only be in one live tournament at a time — stand that one down first.',
+              },
+              409,
+            )
+          }
+        }
+
+        await env.DB.prepare('UPDATE tournament SET is_active = ? WHERE id = ?')
+          .bind(body.isActive ? 1 : 0, id)
+          .run()
+        return json(await adminState(env.DB))
+      }
+
+      return json({ error: 'Unknown action' }, 400)
     }
 
     // ---- GET /api/scout/ping : is the Scout engine answering at all? ----
@@ -944,7 +1243,7 @@ export default {
     // ---- POST /api/scout/refresh : pull scouting from the NAF Scout engine ----
     if (path === '/api/scout/refresh') {
       if (request.method !== 'POST') return json({ error: `${request.method} not allowed` }, 405)
-      const active = await resolveActive(env.DB)
+      const active = await resolveActive(env.DB, view.id)
       if (!active) return json({ error: 'No round is set up' }, 404)
 
       const boards = await env.DB.prepare('SELECT * FROM board WHERE round_id = ? ORDER BY board_no')
@@ -1009,7 +1308,7 @@ export default {
         .bind(active.round.id, JSON.stringify(result.round), result.round.generatedAt)
         .run()
 
-      const state = await readState(env.DB)
+      const state = await readState(env.DB, view)
       return json({
         ...state,
         refresh: {
@@ -1027,12 +1326,12 @@ export default {
 
     // ---- PUT /api/scout : NAF Scout delivers a round's scouting ----
     if (path === '/api/scout') {
-      const active = await resolveActive(env.DB)
+      const active = await resolveActive(env.DB, view.id)
       if (!active) return json({ error: 'No round is set up' }, 404)
 
       if (request.method === 'DELETE') {
         await env.DB.prepare('DELETE FROM scout WHERE round_id = ?').bind(active.round.id).run()
-        return json(await readState(env.DB))
+        return json(await readState(env.DB, view))
       }
 
       if (request.method !== 'PUT') return json({ error: `${request.method} not allowed` }, 405)
@@ -1070,14 +1369,14 @@ export default {
         )
         .run()
 
-      return json(await readState(env.DB))
+      return json(await readState(env.DB, view))
     }
 
     // ---- POST /api/sync : pull live match state from Tourplay ----
     if (path === '/api/sync') {
       if (request.method !== 'POST') return json({ error: `${request.method} not allowed` }, 405)
 
-      const active = await resolveActive(env.DB)
+      const active = await resolveActive(env.DB, view.id)
       if (!active) return json({ error: 'No round is set up' }, 404)
       const { tournament, round } = active
 
@@ -1090,7 +1389,7 @@ export default {
 
       const last = tournament.last_synced_at ? Date.parse(tournament.last_synced_at + 'Z') : 0
       if (Number.isFinite(last) && Date.now() - last < SYNC_MIN_INTERVAL_MS) {
-        return json({ ...(await readState(env.DB)), synced: false, reason: 'too soon' })
+        return json({ ...(await readState(env.DB, view)), synced: false, reason: 'too soon' })
       }
 
       let live
@@ -1107,7 +1406,7 @@ export default {
           .bind(tournament.id)
           .run()
         return json({
-          ...(await readState(env.DB)),
+          ...(await readState(env.DB, view)),
           synced: false,
           reason: 'viewing an earlier round',
           liveRound: live.currentRound,
@@ -1125,7 +1424,7 @@ export default {
       )
       await env.DB.batch(statements)
 
-      return json({ ...(await readState(env.DB)), synced: true, matched: statements.length - 1 })
+      return json({ ...(await readState(env.DB, view)), synced: true, matched: statements.length - 1 })
     }
 
     // ---- POST /api/link : import a Tourplay round ----
@@ -1278,7 +1577,7 @@ export default {
       await env.DB.batch(statements)
       await setActive(env.DB, tournamentId!, roundId!)
 
-      return json({ ...(await readState(env.DB)), linked: true, imported: matches.length })
+      return json({ ...(await readState(env.DB, view)), linked: true, imported: matches.length })
     }
 
     // ---- POST /api/board-order : move a board along the row ----
@@ -1291,7 +1590,7 @@ export default {
         return json({ error: 'Body is not valid JSON' }, 400)
       }
 
-      const active = await resolveActive(env.DB)
+      const active = await resolveActive(env.DB, view.id)
       if (!active) return json({ error: 'No round is set up' }, 404)
 
       const boardId = Number(body?.boardId)
@@ -1346,7 +1645,7 @@ export default {
       }
 
       await env.DB.batch(statements)
-      return json(await readState(env.DB))
+      return json(await readState(env.DB, view))
     }
 
     // ---- POST /api/sync-mode : follow Tourplay, or go manual ----
@@ -1359,12 +1658,12 @@ export default {
         return json({ error: 'Body is not valid JSON' }, 400)
       }
       if (typeof body?.enabled !== 'boolean') return json({ error: 'enabled must be a boolean' }, 400)
-      const active = await resolveActive(env.DB)
+      const active = await resolveActive(env.DB, view.id)
       if (!active) return json({ error: 'No round is set up' }, 404)
       await env.DB.prepare('UPDATE tournament SET sync_enabled = ? WHERE id = ?')
         .bind(body.enabled ? 1 : 0, active.tournament.id)
         .run()
-      return json(await readState(env.DB))
+      return json(await readState(env.DB, view))
     }
 
     if (path !== '/api/round') {
@@ -1372,7 +1671,7 @@ export default {
     }
 
     if (request.method === 'GET') {
-      const state = await readState(env.DB)
+      const state = await readState(env.DB, view)
       if (!state) return json({ error: 'No round has been set up' }, 404)
       return json(state)
     }
@@ -1388,7 +1687,7 @@ export default {
       const result = validate(payload)
       if ('error' in result) return json({ error: result.error }, 400)
 
-      const active = await resolveActive(env.DB)
+      const active = await resolveActive(env.DB, view.id)
       if (!active) return json({ error: 'No round is set up' }, 404)
 
       // One batch, so a save either lands whole or not at all — a half-written
@@ -1424,7 +1723,7 @@ export default {
         return json({ error: `Save rejected by the database: ${String(cause)}` }, 500)
       }
 
-      return json(await readState(env.DB))
+      return json(await readState(env.DB, view))
     }
 
     return json({ error: `${request.method} not allowed` }, 405)

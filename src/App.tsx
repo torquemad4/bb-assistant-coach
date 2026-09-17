@@ -8,15 +8,18 @@ import { WakeToggle } from './components/WakeToggle'
 import { ThemeToggle } from './components/ThemeToggle'
 import { MyBoard } from './components/MyBoard'
 import { Settings } from './components/Settings'
+import { Admin } from './components/Admin'
 import { useIdentity } from './state/useIdentity'
 import { useRound } from './state/useRound'
 
-type Tab = 'myboard' | 'dashboard' | 'prematch' | 'control' | 'settings'
+type Tab = 'myboard' | 'dashboard' | 'prematch' | 'control' | 'settings' | 'admin'
 
 export default function App() {
-  const controller = useRound()
+  const { identity, loaded: identityLoaded, reload: reloadIdentity } = useIdentity()
+  // Identity first: the poll needs to know whether this viewer may drive a
+  // Tourplay pull, which is a write and refused for anybody else.
+  const controller = useRound({ canSync: identity.canCoordinate })
   const { round, connection, loadError, isDirty, reload } = controller
-  const { identity, loaded: identityLoaded } = useIdentity()
 
   // Match Control can rewrite every board, so it needs the coordinator's role —
   // held, or lent by open coordinator mode. The server decides the same way, so
@@ -35,8 +38,11 @@ export default function App() {
     list.push({ id: 'dashboard', label: 'Dashboard' }, { id: 'prematch', label: 'Pre-Match' })
     if (identity.canCoordinate) list.push({ id: 'control', label: 'Match Control' })
     if (identity.isAdmin) list.push({ id: 'settings', label: 'Settings' })
+    // The owner's panel. Not a rank above coordinator — a different axis — so
+    // it survives the coordinator role being handed to somebody else.
+    if (identity.isOwner) list.push({ id: 'admin', label: 'Admin' })
     return list
-  }, [identity.board, identity.canCoordinate, identity.isAdmin])
+  }, [identity.board, identity.canCoordinate, identity.isAdmin, identity.isOwner])
 
   // A coach opening this on their phone wants their own board, not the hall
   // dashboard. Only once identity has actually answered, or it would flick.
@@ -83,7 +89,11 @@ export default function App() {
           {/* Shared state: switching the round moves it for every device in the
               hall, so it is the coordinator's control. The server refuses anyone
               else, but a button that will be refused should not be there. */}
-          {identity.canCoordinate && <Selectors {...controller} />}
+          {/* A coach sees this too, but only to choose between their own
+              tournaments — and not at all once one of them is live. */}
+          {(identity.canCoordinate || round.tournaments.length > 1) && (
+            <Selectors {...controller} canCoordinate={identity.canCoordinate} />
+          )}
 
           <div className="topbar__tools">
             <ThemeToggle />
@@ -137,6 +147,16 @@ export default function App() {
         {tab === 'prematch' && <PreMatch {...controller} />}
         {tab === 'control' && identity.canCoordinate && <ControlPanel {...controller} />}
         {tab === 'settings' && identity.isAdmin && <Settings {...controller} />}
+        {tab === 'admin' && identity.isOwner && (
+          <Admin
+            onChanged={() => {
+              // Roles and live tournaments both change what this very session
+              // may see, so identity and round are both re-read.
+              reloadIdentity()
+              reload()
+            }}
+          />
+        )}
       </main>
     </div>
   )

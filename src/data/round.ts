@@ -20,10 +20,11 @@ export const SEED_ROUND: Round = {
   // coordinator chose.
   casualtyMode: 'removals',
   openCoordinator: false,
+  tournamentLocked: true,
   scout: null,
   // The offline fallback is a single unnamed tournament; the selectors have
   // nothing to switch between when the database cannot be reached.
-  tournaments: [{ id: 1, name: 'England v Italy', slug: null, syncEnabled: false }],
+  tournaments: [{ id: 1, name: 'England v Italy', slug: null, syncEnabled: false, isActive: true }],
   activeTournamentId: 1,
   rounds: [{ id: 1, roundNumber: 3 }],
   activeRoundId: 1,

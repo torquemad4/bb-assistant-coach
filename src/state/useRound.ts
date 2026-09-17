@@ -9,6 +9,7 @@ import {
   moveBoard,
   pingScoutEngine,
   refreshScouting,
+  chooseTournament,
   setCasualtyMode,
   setOpenCoordinator,
   setProvisional,
@@ -148,6 +149,11 @@ export interface RoundController {
   /** Switching what is on screen — shared with every other viewer. */
   switching: boolean
   switchTo: (tournamentId?: number, roundId?: number) => void
+  /**
+   * Moves THIS device to another tournament. Per device rather than shared:
+   * tournaments are independent, so two people can be on different ones.
+   */
+  switchTournament: (tournamentId: number) => void
   addTournament: (name: string) => void
   previewLink: (slug: string) => void
   confirmLink: () => void
@@ -161,7 +167,7 @@ export interface RoundController {
  * The difference between them is the unsaved work, which is why nothing here
  * writes to D1 until `save` is called.
  */
-export function useRound(): RoundController {
+export function useRound(options: { canSync?: boolean } = {}): RoundController {
   const [round, setRound] = useState<Round>(SEED_ROUND)
   const [baseline, setBaseline] = useState<Round>(SEED_ROUND)
   const [connection, setConnection] = useState<Connection>('loading')
@@ -200,8 +206,11 @@ export function useRound(): RoundController {
 
   // Kept in a ref so the polling interval can read current values without
   // being torn down and rebuilt on every keystroke.
-  const guard = useRef({ isDirty, saving, connection, followingTourplay })
-  guard.current = { isDirty, saving, connection, followingTourplay }
+  // Pulling from Tourplay is a write, and writes belong to whoever is running
+  // the round. A coach polls by reading instead — see the poll below.
+  const canSync = options.canSync === true
+  const guard = useRef({ isDirty, saving, connection, followingTourplay, canSync })
+  guard.current = { isDirty, saving, connection, followingTourplay, canSync }
 
   const load = useCallback(async (signal?: AbortSignal) => {
     try {
@@ -247,11 +256,23 @@ export function useRound(): RoundController {
   // edits, so a refresh can never wipe work in progress. When the round follows
   // Tourplay the same tick pulls from it — the server throttles, so several
   // viewers polling does not mean several trips to Tourplay.
+  //
+  // Only a coordinator drives that pull. `/api/sync` is a write and is refused
+  // for anyone else, so a coach ticking on the same branch would have spent the
+  // whole event getting a 403 every ten seconds and never refreshing their own
+  // board. They read instead, which shows them everything the coordinator's
+  // pull has just brought in.
   useEffect(() => {
     const timer = setInterval(() => {
-      const { isDirty: dirty, saving: busy, connection: state, followingTourplay: live } = guard.current
+      const {
+        isDirty: dirty,
+        saving: busy,
+        connection: state,
+        followingTourplay: live,
+        canSync: mine,
+      } = guard.current
       if (dirty || busy || state !== 'live') return
-      if (live) void applySync()
+      if (live && mine) void applySync()
       else void load()
     }, POLL_MS)
     return () => clearInterval(timer)
@@ -394,6 +415,23 @@ export function useRound(): RoundController {
       setLinking(false)
     }
   }, [linkPreview])
+
+  const switchTournament = useCallback(async (tournamentId: number) => {
+    setSwitching(true)
+    try {
+      // Nothing is written: the choice lives on this device and rides on every
+      // request as `?t=`. The server still decides whether it is allowed.
+      chooseTournament(tournamentId)
+      const fresh = await fetchRound()
+      setRound(fresh)
+      setBaseline(fresh)
+      setSyncError(null)
+    } catch (cause) {
+      setSyncError(cause instanceof Error ? cause.message : String(cause))
+    } finally {
+      setSwitching(false)
+    }
+  }, [])
 
   const switchTo = useCallback(async (tournamentId?: number, roundId?: number) => {
     setSwitching(true)
@@ -601,6 +639,7 @@ export function useRound(): RoundController {
     cancelLink: () => setLinkPreview(null),
     switching,
     switchTo: (tournamentId?: number, roundId?: number) => void switchTo(tournamentId, roundId),
+    switchTournament: (tournamentId: number) => void switchTournament(tournamentId),
     addTournament: (name: string) => void addTournament(name),
   }
 }
