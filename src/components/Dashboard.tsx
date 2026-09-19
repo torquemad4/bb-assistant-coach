@@ -101,11 +101,10 @@ export function Dashboard({ round, aggregate, aggregateRange }: RoundController)
       </div>
       )}
 
-      <RoundOutlook
-        boards={cards.map((c) => c.board)}
-        aggregate={ours ? cards.reduce((t, c) => t + c.board.outlook, 0) : aggregate}
-        range={ours ? cards.length : aggregateRange}
-      />
+      {/* `aggregate` already knows about 'ours' mode — see useRound. Recomputing
+          it here from the cards gave the same answer right up until it did not,
+          which is how My Board came to show a different round outlook. */}
+      <RoundOutlook boards={cards.map((c) => c.board)} aggregate={aggregate} range={aggregateRange} />
     </div>
   )
 }

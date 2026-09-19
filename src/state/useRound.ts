@@ -580,17 +580,34 @@ export function useRound(options: { canSync?: boolean } = {}): RoundController {
     }
   }, [])
 
-  const aggregate = useMemo(
-    () => round.boards.reduce((total, board) => total + board.outlook, 0),
-    [round.boards],
-  )
+  /**
+   * How the round is going for us.
+   *
+   * At a two-nation fixture that is every board added up, because we are side A
+   * of all of them. At an open event it is only OUR seats, each from the seat's
+   * own point of view — summing all eight boards there would be adding up games
+   * between strangers, and counting a coach of ours who is sitting on side B
+   * backwards into the bargain.
+   *
+   * Computed here rather than in the views so My Board and the dashboard cannot
+   * disagree about the same number.
+   */
+  const ours = round.dashboardMode === 'ours'
+  const aggregate = useMemo(() => {
+    if (!ours) return round.boards.reduce((total, board) => total + board.outlook, 0)
+    return round.ourSeats.reduce((total, seat) => {
+      const board = round.boards.find((b) => b.id === seat.boardId)
+      if (!board) return total
+      return total + (seat.side === 'a' ? board.outlook : -board.outlook)
+    }, 0)
+  }, [ours, round.boards, round.ourSeats])
 
   return {
     round,
     connection,
     loadError,
     aggregate,
-    aggregateRange: round.boards.length,
+    aggregateRange: ours ? round.ourSeats.length : round.boards.length,
     dirtyBoardIds,
     isDirty,
     saving,
