@@ -56,6 +56,7 @@ export function Dashboard({ round, aggregate, aggregateRange }: RoundController)
             {cards.length === 0
               ? 'nobody of ours drawn yet'
               : `${cards.length} of ours playing`}
+            {round.idleSquad.length > 0 && ` · ${round.idleSquad.length} not drawn`}
           </span>
         </div>
       ) : (
@@ -72,7 +73,7 @@ export function Dashboard({ round, aggregate, aggregateRange }: RoundController)
         </div>
       )}
 
-      {cards.length === 0 ? (
+      {cards.length === 0 && round.idleSquad.length === 0 ? (
         <div className="boards-empty">
           <p>
             <strong>
@@ -88,7 +89,7 @@ export function Dashboard({ round, aggregate, aggregateRange }: RoundController)
           </p>
         </div>
       ) : (
-      <div className="boards" data-count={cards.length}>
+      <div className="boards" data-count={cards.length + round.idleSquad.length}>
         {cards.map(({ key, board, ourOpponent }) => (
           <BoardCard
             key={key}
@@ -101,6 +102,21 @@ export function Dashboard({ round, aggregate, aggregateRange }: RoundController)
             // that is side A.
             whose={ours ? board.a.nafName : null}
           />
+        ))}
+        {/* A named squad is a fixed group, so somebody with no board is
+            resting, not missing. Shown as a slot rather than dropped, so the
+            squad reads as the same five people every round. */}
+        {round.idleSquad.map((m) => (
+          <article key={`idle-${m.nafNumber}`} className="board board--idle">
+            <header className="board__head">
+              <span className="board__number">Not drawn</span>
+            </header>
+            <div className="board__idle">
+              <Flag country={round.teamA.country} />
+              <span className="board__idle-name">{m.name}</span>
+              <span className="board__idle-note">sitting this round out</span>
+            </div>
+          </article>
         ))}
       </div>
       )}

@@ -437,7 +437,16 @@ async function readState(
   // on it yields two — the same match seen from each end.
   const dashboardMode = tournament.dashboard_mode === 'ours' ? 'ours' : 'fixture'
   let ourSeats: { boardId: number; side: 'a' | 'b' }[] = []
+  let idle: { nafNumber: number; name: string }[] = []
   if (dashboardMode === 'ours') {
+    // A named squad wins over the derived one. See migration 0014: at an open
+    // event the people Karl is watching are his own selection, not whoever
+    // happens to hold a login.
+    const squad = await db
+      .prepare('SELECT naf_number, display_name FROM tournament_squad WHERE tournament_id = ?')
+      .bind(tournament.id)
+      .all<{ naf_number: number; display_name: string }>()
+    const named = squad.results ?? []
     const rows = await db
       .prepare(
         // EXISTS rather than a join: two roster rows carrying the same NAF
@@ -446,28 +455,52 @@ async function readState(
         // total. Nothing stops a second row today — `naf_number` is not
         // unique — and a duplicate is easiest to create by accident exactly
         // when somebody is being added mid-event.
-        `SELECT b.board_no AS board_no,
-                EXISTS (SELECT 1 FROM coach_identity c
-                         WHERE c.naf_number IS NOT NULL
-                           AND c.naf_number = b.a_naf_number) AS mine_a,
-                EXISTS (SELECT 1 FROM coach_identity c
-                         WHERE c.naf_number IS NOT NULL
-                           AND c.naf_number = b.b_naf_number) AS mine_b
-           FROM board b
-          WHERE b.round_id = ?
-          ORDER BY b.board_no`,
+        `SELECT board_no, a_naf_number, b_naf_number
+           FROM board
+          WHERE round_id = ?
+          ORDER BY board_no`,
       )
       .bind(round.id)
-      .all<{ board_no: number; mine_a: number; mine_b: number }>()
+      .all<{ board_no: number; a_naf_number: number | null; b_naf_number: number | null }>()
+
+    // Either way membership is a set of NAF numbers, so the seat-finding below
+    // is the same code for both. The derived set keeps the EXISTS semantics it
+    // had: two roster rows sharing a number must not yield the seat twice.
+    const members = new Set<number>(
+      named.length > 0
+        ? named.map((m) => m.naf_number)
+        : ((
+            await db
+              .prepare('SELECT DISTINCT naf_number FROM coach_identity WHERE naf_number IS NOT NULL')
+              .all<{ naf_number: number }>()
+          ).results ?? []).map((r) => r.naf_number),
+    )
+
+    const playing = new Set<number>()
     for (const r of rows.results ?? []) {
-      if (r.mine_a === 1) ourSeats.push({ boardId: r.board_no, side: 'a' })
-      if (r.mine_b === 1) ourSeats.push({ boardId: r.board_no, side: 'b' })
+      if (r.a_naf_number != null && members.has(r.a_naf_number)) {
+        ourSeats.push({ boardId: r.board_no, side: 'a' })
+        playing.add(r.a_naf_number)
+      }
+      if (r.b_naf_number != null && members.has(r.b_naf_number)) {
+        ourSeats.push({ boardId: r.board_no, side: 'b' })
+        playing.add(r.b_naf_number)
+      }
     }
+
+    // A named squad is a fixed set of people, so somebody with no board this
+    // round is sitting out rather than absent, and the dashboard says so.
+    // Only a named squad can know this: a derived one has no way to tell a
+    // coach who is resting from one who is at a different event entirely.
+    idle = named
+      .filter((m) => !playing.has(m.naf_number))
+      .map((m) => ({ nafNumber: m.naf_number, name: m.display_name }))
   }
 
   return {
     dashboardMode,
     ourSeats,
+    idleSquad: idle,
     tournaments: (tournaments.results as any[]).map((t) => ({
       id: t.id,
       name: t.name,

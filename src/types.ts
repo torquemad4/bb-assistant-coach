@@ -156,6 +156,12 @@ export interface OurSeat {
   side: 'a' | 'b'
 }
 
+/** A squad member with no board this round — named, so they can be shown resting. */
+export interface IdleSquadMember {
+  nafNumber: number
+  name: string
+}
+
 /**
  * Which seats on a board wear our flag.
  *
@@ -219,6 +225,11 @@ export interface Round {
   dashboardMode: DashboardMode
   /** In `ours` mode, one entry per seat of ours. Empty otherwise. */
   ourSeats: OurSeat[]
+  /**
+   * Squad members sitting this round out. Only ever populated for a tournament
+   * that names its squad — a derived squad cannot tell resting from absent.
+   */
+  idleSquad: IdleSquadMember[]
   /**
    * True when this viewer may not change tournament — a coach whose own
    * tournament is live is held to it.

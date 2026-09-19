@@ -3437,6 +3437,40 @@ h1 {
 
 .ft__whose-score {
   margin-left: auto;
+  /* Never wrap: "1-0" breaking across two lines squeezed the name into an
+     ellipsis beside it, which is the one thing the line exists to show. */
+  white-space: nowrap;
   font-variant-numeric: tabular-nums;
   color: var(--ink);
+}
+
+/* A squad member with no board this round. Deliberately quiet — it is a
+   placeholder in the row, not a result to read across the hall. */
+.board--idle {
+  display: flex;
+  flex-direction: column;
+  opacity: 0.55;
+  border-style: dashed;
+}
+
+.board__idle {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  padding: 1rem 0.7rem;
+  text-align: center;
+}
+
+.board__idle-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.board__idle-note {
+  font-size: 0.72rem;
+  color: var(--ink-dim);
 }
