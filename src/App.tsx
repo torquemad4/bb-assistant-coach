@@ -9,10 +9,11 @@ import { ThemeToggle } from './components/ThemeToggle'
 import { MyBoard } from './components/MyBoard'
 import { Settings } from './components/Settings'
 import { Admin } from './components/Admin'
+import { Tables } from './components/Tables'
 import { useIdentity } from './state/useIdentity'
 import { useRound } from './state/useRound'
 
-type Tab = 'myboard' | 'dashboard' | 'prematch' | 'control' | 'settings' | 'admin'
+type Tab = 'myboard' | 'dashboard' | 'prematch' | 'tables' | 'control' | 'settings' | 'admin'
 
 export default function App() {
   const { identity, loaded: identityLoaded, reload: reloadIdentity } = useIdentity()
@@ -36,7 +37,12 @@ export default function App() {
     const list: { id: Tab; label: string }[] = []
     if (identity.board) list.push({ id: 'myboard', label: 'My Board' })
     list.push({ id: 'dashboard', label: 'Dashboard' }, { id: 'prematch', label: 'Pre-Match' })
-    if (identity.canCoordinate) list.push({ id: 'control', label: 'Match Control' })
+    // Tables sits next to Pre-Match because it is the same figures cut a
+    // different way — one table's two boards rather than every board. A pairs
+    // thing, so it stays with whoever is running the event.
+    if (identity.canCoordinate) {
+      list.push({ id: 'tables', label: 'Tables' }, { id: 'control', label: 'Match Control' })
+    }
     if (identity.isAdmin) list.push({ id: 'settings', label: 'Settings' })
     // The owner's panel. Not a rank above coordinator — a different axis — so
     // it survives the coordinator role being handed to somebody else.
@@ -145,6 +151,7 @@ export default function App() {
         {tab === 'myboard' && <MyBoard controller={controller} identity={identity} />}
         {tab === 'dashboard' && <Dashboard {...controller} />}
         {tab === 'prematch' && <PreMatch {...controller} />}
+        {tab === 'tables' && identity.canCoordinate && <Tables {...controller} />}
         {tab === 'control' && identity.canCoordinate && <ControlPanel {...controller} />}
         {tab === 'settings' && identity.isAdmin && <Settings {...controller} />}
         {tab === 'admin' && identity.isOwner && (

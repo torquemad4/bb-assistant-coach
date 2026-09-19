@@ -105,7 +105,7 @@ function CoachBlock({ side, team, country, scout, oppRace }: CoachBlockProps) {
   )
 }
 
-interface CardProps {
+export interface CardProps {
   board: Board
   scout: ScoutBoard | undefined
   controller: RoundController
@@ -116,7 +116,20 @@ interface CardProps {
   count: number
 }
 
-function PreMatchCard({ board, scout, controller, countryA, countryB, index, count }: CardProps) {
+/**
+ * One board's pre-match read. Exported so the Tables view can show the same
+ * card for the two boards of a table — the figures a coach argues about should
+ * not exist in two places that can drift apart.
+ */
+export function PreMatchCard({
+  board,
+  scout,
+  controller,
+  countryA,
+  countryB,
+  index,
+  count,
+}: CardProps) {
   const { tagBoard, unlockBoard, moveBoard, tagging, reordering, isDirty, connection } = controller
   const locked = board.tagLocked
   // Both tagging and reordering write straight through, so both would lose

@@ -3286,3 +3286,124 @@ h1 {
     width: 100%;
   }
 }
+
+/* ---------- one table of a pairs event ---------- */
+
+/*
+ * Two boards, side by side, because that is how they are played. The picker is
+ * a row of table numbers rather than a dropdown: in a hall you are standing at
+ * a table and already know its number, and a number you can hit with a thumb
+ * beats a menu you have to open and read.
+ */
+.tables {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+  min-height: 0;
+}
+
+.tables__picker {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px clamp(12px, 1.5vw, 16px);
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.tables__picker-label {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.tables__numbers {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.tables__number {
+  min-width: var(--tap);
+  min-height: var(--tap);
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--bg-sunken);
+  color: var(--ink-dim);
+  font-size: 1rem;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+
+.tables__number.is-on {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--bg);
+}
+
+/* Which boards this table is, for reading out across a noisy hall. */
+.tables__boards {
+  margin-left: auto;
+  font-size: 0.78rem;
+  font-weight: 650;
+  color: var(--ink-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.tables__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  /* Cards are as tall as their contents and sit at the top. Without these the
+     grid stretches them down the page and a short card becomes a long box with
+     nothing in the bottom half of it. */
+  grid-auto-rows: max-content;
+  align-items: start;
+  align-content: start;
+  gap: 10px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* A lone board — an odd number of them — takes half the width rather than
+   stretching into a shape the card was never drawn for. */
+.tables__grid[data-count='1'] {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 640px;
+}
+
+.tables__none {
+  margin: 0;
+  padding: 14px 16px;
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--ink-dim);
+}
+
+/* On a phone the two boards stack and the page scrolls, as everything else
+   does at this width. */
+@media (max-width: 700px) {
+  .tables {
+    flex: none;
+  }
+
+  .tables__grid {
+    grid-template-columns: minmax(0, 1fr);
+    flex: none;
+    min-height: 0;
+  }
+
+  .tables__boards {
+    margin-left: 0;
+    width: 100%;
+  }
+}
