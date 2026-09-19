@@ -137,12 +137,23 @@ function notAllowed(viewer: Viewer): Response {
 /** Every viewer polls, so Tourplay is only re-read when the data is older than this. */
 const SYNC_MIN_INTERVAL_MS = 8_000
 
-/** The app renders at most this many boards. */
-const MAX_BOARDS = 8
+/**
+ * The most boards one round may hold.
+ *
+ * Was 8, the size of a team fixture: England's eight against somebody else's.
+ * An open event has as many boards as the draw has pairings, and Team England
+ * Pathway Pairs reached ten in round 3 — at which point the old cap rejected
+ * Match Control's save outright ("Bad board id: 9") and would have made a
+ * Tourplay import silently drop the last two matches.
+ *
+ * Sixteen is headroom rather than a new meaning: the cap is only here to bound
+ * a request body, not to describe an event.
+ */
+const MAX_BOARDS = 16
 
 /**
- * Where a board's number is parked for the instant a swap takes to run. Outside
- * the 1-8 range on purpose, so it can never collide with a real board.
+ * Where a board's number is parked for the instant a swap takes to run.
+ * Negative on purpose, so it can never collide with a real board number.
  */
 const PARKING_BOARD_NO = -1
 
