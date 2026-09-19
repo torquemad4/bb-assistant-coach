@@ -10,6 +10,7 @@ import {
   flipKickoff,
   resultOf,
   type Kickoff,
+  type Result,
   type Outlook,
   type Period,
 } from '../types'
@@ -215,6 +216,36 @@ export function MyBoard({
   const setMyOutlook = (next: Outlook) =>
     push({ ...live, outlook: (mine === 'a' ? next : -next) as Outlook })
 
+  // The strip of results under the round outlook, one pip per game that counts
+  // towards it — so it agrees with the number above it.
+  //
+  // Two things were wrong at an open event. It listed every board, including
+  // games between strangers, and it read W/D/L from side A, so a coach on side
+  // B saw their own win as an L on their own pip. Both are the seat problem
+  // again: a result, like an outlook, belongs to a seat and not to a board.
+  const pips: { key: string; boardId: number; result: Result | null; mine: boolean }[] =
+    round.dashboardMode === 'ours'
+      ? round.ourSeats.flatMap((s) => {
+          const b = round.boards.find((x) => x.id === s.boardId)
+          if (!b) return []
+          const r = b.period === 'FT' ? resultOf(b) : null
+          const seen = s.side === 'a' ? r : r === 'W' ? 'L' : r === 'L' ? 'W' : r
+          return [
+            {
+              key: `${s.boardId}-${s.side}`,
+              boardId: s.boardId,
+              result: seen,
+              mine: s.boardId === seat.id && s.side === mine,
+            },
+          ]
+        })
+      : round.boards.map((b) => ({
+          key: String(b.id),
+          boardId: b.id,
+          result: b.period === 'FT' ? resultOf(b) : null,
+          mine: b.id === seat.id,
+        }))
+
   // Kick-off is stored the same way — what SIDE A did — and this page speaks
   // entirely in the coach's own terms, so it flips with the seat exactly as
   // outlook does. Without this a coach on side B taps "Kicked" and the app
@@ -413,18 +444,16 @@ export function MyBoard({
         </div>
 
         <ul className="mb__results" aria-label="Boards already finished">
-          {round.boards.map((b) => {
-            const done = b.period === 'FT'
-            const r = done ? resultOf(b) : null
-            return (
-              <li key={b.id} className={`mb__pip${b.id === seat.id ? ' is-mine' : ''}`}>
-                <span className="mb__pip-no">{b.id}</span>
-                <span className={`mb__pip-result${r ? ` is-${r.toLowerCase()}` : ''}`}>
-                  {r ?? '·'}
-                </span>
-              </li>
-            )
-          })}
+          {pips.map((pip) => (
+            <li key={pip.key} className={`mb__pip${pip.mine ? ' is-mine' : ''}`}>
+              <span className="mb__pip-no">{pip.boardId}</span>
+              <span
+                className={`mb__pip-result${pip.result ? ` is-${pip.result.toLowerCase()}` : ''}`}
+              >
+                {pip.result ?? '·'}
+              </span>
+            </li>
+          ))}
         </ul>
       </section>
     </div>
