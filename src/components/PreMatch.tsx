@@ -10,7 +10,15 @@ import {
   type ScoutRecord,
 } from '../scout'
 import type { RoundController } from '../state/useRound'
-import { TAGS, TAG_LABEL, type Board, type CountryCode, type Side, type Tag } from '../types'
+import {
+  TAGS,
+  TAG_LABEL,
+  flagsForBoard,
+  type Board,
+  type CountryCode,
+  type Side,
+  type Tag,
+} from '../types'
 
 /** Fewer games than this and the figure is marked as a small sample. */
 const THIN_SAMPLE = 5
@@ -393,8 +401,8 @@ export function PreMatch(controller: RoundController) {
             board={board}
             scout={byBoard.get(board.id)}
             controller={controller}
-            countryA={round.teamA.country}
-            countryB={round.teamB.country}
+            countryA={flagsForBoard(round, board.id).a}
+            countryB={flagsForBoard(round, board.id).b}
             index={index}
             count={round.boards.length}
           />

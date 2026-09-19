@@ -53,10 +53,19 @@ interface BoardCardProps {
   countryB: CountryCode | null
   /** How the casualty pair reads — the same choice the whole hall is on. */
   mode: CasualtyMode
+  /**
+   * Whose card this is, when the card is a coach's seat rather than a board.
+   *
+   * A finished card is otherwise just a letter, which is enough when the board
+   * number names it. In 'ours' mode it is not: a board with two of ours on it
+   * finishes as two cards with the same number, one W and one L, and nothing
+   * on either to say which coach is which.
+   */
+  whose?: string | null
 }
 
 /** One vertical board column: coach A on top, score in the middle, coach B below. */
-export function BoardCard({ board, countryA, countryB, mode }: BoardCardProps) {
+export function BoardCard({ board, countryA, countryB, mode, whose }: BoardCardProps) {
   const tone = toneOf(board.outlook)
 
   // A finished match has nothing left to read but its result, so the card
@@ -64,7 +73,14 @@ export function BoardCard({ board, countryA, countryB, mode }: BoardCardProps) {
   if (board.period === 'FT') {
     const result = resultOf(board)
     return (
-      <article className="board board--ft" aria-label={`Board ${board.id}, full time`}>
+      <article
+        className="board board--ft"
+        aria-label={
+          whose
+            ? `Board ${board.id}, ${whose}, full time, ${result}`
+            : `Board ${board.id}, full time`
+        }
+      >
         <header className="board__head">
           <span className="board__number">Board {board.id}</span>
           {board.tag && <span className={`tag tag--${board.tag}`}>{TAG_LABEL[board.tag]}</span>}
@@ -73,6 +89,15 @@ export function BoardCard({ board, countryA, countryB, mode }: BoardCardProps) {
         <div className={`ft ft--${result.toLowerCase()}`} aria-label={`Result ${result}`}>
           {result}
         </div>
+        {whose && (
+          <div className="ft__whose">
+            <Flag country={countryA} />
+            <span className="ft__whose-name">{whose}</span>
+            <span className="ft__whose-score">
+              {board.a.score}–{board.b.score}
+            </span>
+          </div>
+        )}
       </article>
     )
   }

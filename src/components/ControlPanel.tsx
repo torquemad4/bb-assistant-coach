@@ -8,6 +8,7 @@ import {
   OUTLOOK_MAX,
   OUTLOOK_MIN,
   PERIODS,
+  flagsForBoard,
   type Board,
   type CountryCode,
   type Period,
@@ -256,8 +257,8 @@ export function ControlPanel(controller: RoundController) {
             key={board.id}
             board={board}
             controller={controller}
-            countryA={round.teamA.country}
-            countryB={round.teamB.country}
+            countryA={flagsForBoard(round, board.id).a}
+            countryB={flagsForBoard(round, board.id).b}
           />
         ))}
       </div>

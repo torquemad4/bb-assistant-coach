@@ -440,12 +440,20 @@ async function readState(
   if (dashboardMode === 'ours') {
     const rows = await db
       .prepare(
+        // EXISTS rather than a join: two roster rows carrying the same NAF
+        // number would make the join emit the board twice, which draws that
+        // coach's card twice and counts their outlook twice in the round
+        // total. Nothing stops a second row today — `naf_number` is not
+        // unique — and a duplicate is easiest to create by accident exactly
+        // when somebody is being added mid-event.
         `SELECT b.board_no AS board_no,
-                CASE WHEN ca.email IS NOT NULL THEN 1 ELSE 0 END AS mine_a,
-                CASE WHEN cb.email IS NOT NULL THEN 1 ELSE 0 END AS mine_b
+                EXISTS (SELECT 1 FROM coach_identity c
+                         WHERE c.naf_number IS NOT NULL
+                           AND c.naf_number = b.a_naf_number) AS mine_a,
+                EXISTS (SELECT 1 FROM coach_identity c
+                         WHERE c.naf_number IS NOT NULL
+                           AND c.naf_number = b.b_naf_number) AS mine_b
            FROM board b
-           LEFT JOIN coach_identity ca ON ca.naf_number = b.a_naf_number
-           LEFT JOIN coach_identity cb ON cb.naf_number = b.b_naf_number
           WHERE b.round_id = ?
           ORDER BY b.board_no`,
       )

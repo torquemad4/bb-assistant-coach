@@ -157,6 +157,33 @@ export interface OurSeat {
 }
 
 /**
+ * Which seats on a board wear our flag.
+ *
+ * At a two-nation fixture that is simply side A: we are side A of every board,
+ * so the flag can be a property of the side. An open event breaks that. The
+ * draw puts our coaches wherever it likes, and the honest answer is per seat —
+ * a board can carry our flag on one side, on both (two of ours drawn together)
+ * or on neither, which is most of the hall.
+ *
+ * Flagging side A regardless is what put an England flag on Warka and CplRabbit
+ * at Sheffield while Torquemada and GreenskinPhil, who are actually ours, went
+ * unmarked.
+ */
+export function flagsForBoard(
+  round: Pick<Round, 'dashboardMode' | 'ourSeats' | 'teamA' | 'teamB'>,
+  boardId: number,
+): { a: CountryCode | null; b: CountryCode | null } {
+  if (round.dashboardMode !== 'ours') {
+    return { a: round.teamA.country, b: round.teamB.country }
+  }
+  const ours = (side: 'a' | 'b') =>
+    round.ourSeats.some((s) => s.boardId === boardId && s.side === side)
+      ? round.teamA.country
+      : null
+  return { a: ours('a'), b: ours('b') }
+}
+
+/**
  * Kick-off from the other side's point of view.
  *
  * `kickoff` records what SIDE A did, so for side B it reads the other way: the

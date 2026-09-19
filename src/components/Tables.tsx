@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { PreMatchCard } from './PreMatch'
 import type { RoundController } from '../state/useRound'
-import type { Board } from '../types'
+import { flagsForBoard, type Board } from '../types'
 
 /**
  * One table of a pairs event: the two boards played side by side on it.
@@ -86,8 +86,8 @@ export function Tables(controller: RoundController) {
             board={board}
             scout={byBoard.get(board.id)}
             controller={controller}
-            countryA={round.teamA.country}
-            countryB={round.teamB.country}
+            countryA={flagsForBoard(round, board.id).a}
+            countryB={flagsForBoard(round, board.id).b}
             // Reordering is a Pre-Match job and moving a board here would
             // silently re-cut the tables under the reader, so the arrows are
             // switched off by telling the card it is the only board there is.

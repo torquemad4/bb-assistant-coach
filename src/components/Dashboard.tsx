@@ -96,6 +96,10 @@ export function Dashboard({ round, aggregate, aggregateRange }: RoundController)
             countryA={round.teamA.country}
             countryB={ours ? (ourOpponent ? round.teamA.country : null) : round.teamB.country}
             mode={round.casualtyMode}
+            // In 'ours' mode the card is a seat, so a finished one has to say
+            // whose seat. The board is mirrored to put our coach on top, so
+            // that is side A.
+            whose={ours ? board.a.nafName : null}
           />
         ))}
       </div>

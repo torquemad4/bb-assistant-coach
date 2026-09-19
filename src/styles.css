@@ -3415,3 +3415,28 @@ h1 {
   font-weight: 650;
   color: var(--ink-dim);
 }
+
+/* Whose result this is, on a finished card in 'ours' mode. A board with two of
+   ours on it finishes as two cards with the same number and opposite letters,
+   so the letter alone does not say which coach you are looking at. */
+.ft__whose {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0 0.7rem 0.7rem;
+  font-size: 0.78rem;
+  font-weight: 650;
+  color: var(--ink-dim);
+}
+
+.ft__whose-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ft__whose-score {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
