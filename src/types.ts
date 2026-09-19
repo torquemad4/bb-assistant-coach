@@ -156,8 +156,15 @@ export interface OurSeat {
   side: 'a' | 'b'
 }
 
-/** A squad member with no board this round — named, so they can be shown resting. */
-export interface IdleSquadMember {
+/**
+ * A named squad member with no board in this round's draw.
+ *
+ * At Sheffield they are not idle — they are playing the Round Robin, the side
+ * competition for whoever is out of the pairs draw that round. So the type
+ * says only what is certain, that they are off this draw, and the dashboard
+ * supplies the words for where they actually are.
+ */
+export interface OffDrawMember {
   nafNumber: number
   name: string
 }
@@ -226,10 +233,11 @@ export interface Round {
   /** In `ours` mode, one entry per seat of ours. Empty otherwise. */
   ourSeats: OurSeat[]
   /**
-   * Squad members sitting this round out. Only ever populated for a tournament
-   * that names its squad — a derived squad cannot tell resting from absent.
+   * Squad members with no board in this round's draw. Only ever populated for
+   * a tournament that names its squad — a derived one cannot tell a member who
+   * is elsewhere from one who is not at the event.
    */
-  idleSquad: IdleSquadMember[]
+  offDraw: OffDrawMember[]
   /**
    * True when this viewer may not change tournament — a coach whose own
    * tournament is live is held to it.

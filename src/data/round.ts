@@ -21,7 +21,7 @@ export const SEED_ROUND: Round = {
   casualtyMode: 'removals',
   dashboardMode: 'fixture',
   ourSeats: [],
-  idleSquad: [],
+  offDraw: [],
   openCoordinator: false,
   tournamentLocked: true,
   scout: null,

@@ -108,7 +108,7 @@ function normalise(payload: any): Round {
     casualtyMode: payload.casualtyMode === 'players' ? 'players' : 'removals',
     dashboardMode: payload.dashboardMode === 'ours' ? 'ours' : 'fixture',
     ourSeats: Array.isArray(payload.ourSeats) ? payload.ourSeats : [],
-    idleSquad: Array.isArray(payload.idleSquad) ? payload.idleSquad : [],
+    offDraw: Array.isArray(payload.offDraw) ? payload.offDraw : [],
     openCoordinator: payload.openCoordinator === true,
     tournamentLocked: payload.tournamentLocked === true,
     scout: payload.scout ?? null,

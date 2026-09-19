@@ -3444,16 +3444,17 @@ h1 {
   color: var(--ink);
 }
 
-/* A squad member with no board this round. Deliberately quiet — it is a
-   placeholder in the row, not a result to read across the hall. */
-.board--idle {
+/* A squad member off this round's draw — at Sheffield, playing the Round
+   Robin. Deliberately quiet: a placeholder in the row, not a result to read
+   across the hall. */
+.board--off {
   display: flex;
   flex-direction: column;
   opacity: 0.55;
   border-style: dashed;
 }
 
-.board__idle {
+.board__off {
   display: flex;
   flex: 1;
   flex-direction: column;
@@ -3464,13 +3465,8 @@ h1 {
   text-align: center;
 }
 
-.board__idle-name {
+.board__off-name {
   font-size: 0.95rem;
   font-weight: 700;
   color: var(--ink);
-}
-
-.board__idle-note {
-  font-size: 0.72rem;
-  color: var(--ink-dim);
 }

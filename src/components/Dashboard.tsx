@@ -56,7 +56,7 @@ export function Dashboard({ round, aggregate, aggregateRange }: RoundController)
             {cards.length === 0
               ? 'nobody of ours drawn yet'
               : `${cards.length} of ours playing`}
-            {round.idleSquad.length > 0 && ` · ${round.idleSquad.length} not drawn`}
+            {round.offDraw.length > 0 && ` · ${round.offDraw.length} in the Round Robin`}
           </span>
         </div>
       ) : (
@@ -73,7 +73,7 @@ export function Dashboard({ round, aggregate, aggregateRange }: RoundController)
         </div>
       )}
 
-      {cards.length === 0 && round.idleSquad.length === 0 ? (
+      {cards.length === 0 && round.offDraw.length === 0 ? (
         <div className="boards-empty">
           <p>
             <strong>
@@ -89,7 +89,7 @@ export function Dashboard({ round, aggregate, aggregateRange }: RoundController)
           </p>
         </div>
       ) : (
-      <div className="boards" data-count={cards.length + round.idleSquad.length}>
+      <div className="boards" data-count={cards.length + round.offDraw.length}>
         {cards.map(({ key, board, ourOpponent }) => (
           <BoardCard
             key={key}
@@ -103,18 +103,18 @@ export function Dashboard({ round, aggregate, aggregateRange }: RoundController)
             whose={ours ? board.a.nafName : null}
           />
         ))}
-        {/* A named squad is a fixed group, so somebody with no board is
-            resting, not missing. Shown as a slot rather than dropped, so the
-            squad reads as the same five people every round. */}
-        {round.idleSquad.map((m) => (
-          <article key={`idle-${m.nafNumber}`} className="board board--idle">
+        {/* A named squad is a fixed group, so somebody off this draw is
+            accounted for, not missing — at Sheffield they are playing the
+            Round Robin. Shown as a slot rather than dropped, so the squad
+            reads as the same five people every round. */}
+        {round.offDraw.map((m) => (
+          <article key={`off-${m.nafNumber}`} className="board board--off">
             <header className="board__head">
-              <span className="board__number">Not drawn</span>
+              <span className="board__number">Round Robin</span>
             </header>
-            <div className="board__idle">
+            <div className="board__off">
               <Flag country={round.teamA.country} />
-              <span className="board__idle-name">{m.name}</span>
-              <span className="board__idle-note">sitting this round out</span>
+              <span className="board__off-name">{m.name}</span>
             </div>
           </article>
         ))}

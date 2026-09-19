@@ -437,7 +437,7 @@ async function readState(
   // on it yields two — the same match seen from each end.
   const dashboardMode = tournament.dashboard_mode === 'ours' ? 'ours' : 'fixture'
   let ourSeats: { boardId: number; side: 'a' | 'b' }[] = []
-  let idle: { nafNumber: number; name: string }[] = []
+  let offDraw: { nafNumber: number; name: string }[] = []
   if (dashboardMode === 'ours') {
     // A named squad wins over the derived one. See migration 0014: at an open
     // event the people Karl is watching are his own selection, not whoever
@@ -488,11 +488,11 @@ async function readState(
       }
     }
 
-    // A named squad is a fixed set of people, so somebody with no board this
-    // round is sitting out rather than absent, and the dashboard says so.
-    // Only a named squad can know this: a derived one has no way to tell a
-    // coach who is resting from one who is at a different event entirely.
-    idle = named
+    // A named squad is a fixed set of people, so somebody with no board in
+    // this round's draw is accounted for rather than absent, and the dashboard
+    // says where they are. Only a named squad can know this: a derived one
+    // cannot tell a member who is elsewhere from one who is not at the event.
+    offDraw = named
       .filter((m) => !playing.has(m.naf_number))
       .map((m) => ({ nafNumber: m.naf_number, name: m.display_name }))
   }
@@ -500,7 +500,7 @@ async function readState(
   return {
     dashboardMode,
     ourSeats,
-    idleSquad: idle,
+    offDraw,
     tournaments: (tournaments.results as any[]).map((t) => ({
       id: t.id,
       name: t.name,
