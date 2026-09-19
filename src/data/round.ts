@@ -19,6 +19,8 @@ export const SEED_ROUND: Round = {
   // The reading the app has always had; the offline fixture cannot know what a
   // coordinator chose.
   casualtyMode: 'removals',
+  dashboardMode: 'fixture',
+  ourSeats: [],
   openCoordinator: false,
   tournamentLocked: true,
   scout: null,

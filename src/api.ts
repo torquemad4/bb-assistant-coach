@@ -106,6 +106,8 @@ function normalise(payload: any): Round {
     // Anything unrecognised reads as removals, the meaning the app had before
     // the setting existed.
     casualtyMode: payload.casualtyMode === 'players' ? 'players' : 'removals',
+    dashboardMode: payload.dashboardMode === 'ours' ? 'ours' : 'fixture',
+    ourSeats: Array.isArray(payload.ourSeats) ? payload.ourSeats : [],
     openCoordinator: payload.openCoordinator === true,
     tournamentLocked: payload.tournamentLocked === true,
     scout: payload.scout ?? null,

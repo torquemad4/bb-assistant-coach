@@ -3407,3 +3407,11 @@ h1 {
     width: 100%;
   }
 }
+
+/* At an open event there is no opposing nation to name, so the legend says how
+   many of ours are out there instead. */
+.legend__ours {
+  font-size: 0.8rem;
+  font-weight: 650;
+  color: var(--ink-dim);
+}

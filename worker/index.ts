@@ -172,6 +172,8 @@ interface TournamentRow {
   active_round_id: number | null
   casualty_mode: string | null
   open_coordinator: number | null
+  /** 'ours' makes the dashboard one card per coach of ours — see migration 0013. */
+  dashboard_mode: string | null
 }
 
 interface RoundRow {
@@ -429,7 +431,35 @@ async function readState(
     db.prepare('SELECT * FROM board WHERE round_id = ? ORDER BY board_no').bind(round.id),
   ])
 
+  // In 'ours' mode the dashboard is made of our coaches rather than of boards.
+  // Worked out here, where coach_identity lives, so the client never has to be
+  // told who "we" are: one entry per seat of ours, and a board with two of ours
+  // on it yields two — the same match seen from each end.
+  const dashboardMode = tournament.dashboard_mode === 'ours' ? 'ours' : 'fixture'
+  let ourSeats: { boardId: number; side: 'a' | 'b' }[] = []
+  if (dashboardMode === 'ours') {
+    const rows = await db
+      .prepare(
+        `SELECT b.board_no AS board_no,
+                CASE WHEN ca.email IS NOT NULL THEN 1 ELSE 0 END AS mine_a,
+                CASE WHEN cb.email IS NOT NULL THEN 1 ELSE 0 END AS mine_b
+           FROM board b
+           LEFT JOIN coach_identity ca ON ca.naf_number = b.a_naf_number
+           LEFT JOIN coach_identity cb ON cb.naf_number = b.b_naf_number
+          WHERE b.round_id = ?
+          ORDER BY b.board_no`,
+      )
+      .bind(round.id)
+      .all<{ board_no: number; mine_a: number; mine_b: number }>()
+    for (const r of rows.results ?? []) {
+      if (r.mine_a === 1) ourSeats.push({ boardId: r.board_no, side: 'a' })
+      if (r.mine_b === 1) ourSeats.push({ boardId: r.board_no, side: 'b' })
+    }
+  }
+
   return {
+    dashboardMode,
+    ourSeats,
     tournaments: (tournaments.results as any[]).map((t) => ({
       id: t.id,
       name: t.name,

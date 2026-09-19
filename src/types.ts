@@ -138,9 +138,48 @@ export type CasualtyMode = 'removals' | 'players'
 
 export const CASUALTY_MODES: readonly CasualtyMode[] = ['removals', 'players']
 
+/**
+ * What the dashboard is made of.
+ *
+ * `fixture` — one card per board, the two-nation default: our coach is side A
+ * on every board, so a board and our player's game are the same thing.
+ *
+ * `ours` — one card per coach of OURS, always from their point of view. At an
+ * open event our coaches are scattered through other people's squads and can
+ * sit on either side, so a board with two of ours on it shows twice, mirrored.
+ */
+export type DashboardMode = 'fixture' | 'ours'
+
+/** One seat of ours at this round: which board, and which side of it. */
+export interface OurSeat {
+  boardId: number
+  side: 'a' | 'b'
+}
+
+/**
+ * The same board seen from the other end.
+ *
+ * Outlook is stored from side A's point of view, so it has to invert with the
+ * sides — otherwise a mirrored card would show our coach's good position as
+ * somebody else's. Everything else is a straight swap.
+ */
+export function mirrorBoard(board: Board): Board {
+  return {
+    ...board,
+    a: board.b,
+    b: board.a,
+    kickoff: board.kickoff === 'K' ? 'R' : board.kickoff === 'R' ? 'K' : null,
+    outlook: (board.outlook === 0 ? 0 : -board.outlook) as Outlook,
+  }
+}
+
 export interface Round {
   /** How the casualty numbers read on screen. The tournament's own, not global. */
   casualtyMode: CasualtyMode
+  /** Whether the dashboard is built from boards or from our coaches. */
+  dashboardMode: DashboardMode
+  /** In `ours` mode, one entry per seat of ours. Empty otherwise. */
+  ourSeats: OurSeat[]
   /**
    * True when this viewer may not change tournament — a coach whose own
    * tournament is live is held to it.
