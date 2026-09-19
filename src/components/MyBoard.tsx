@@ -7,6 +7,7 @@ import {
   OUTLOOK_MIN,
   OUTLOOK_STEP,
   PERIODS,
+  flipKickoff,
   resultOf,
   type Kickoff,
   type Outlook,
@@ -213,6 +214,15 @@ export function MyBoard({
   const myOutlook = (mine === 'a' ? live.outlook : -live.outlook) as Outlook
   const setMyOutlook = (next: Outlook) =>
     push({ ...live, outlook: (mine === 'a' ? next : -next) as Outlook })
+
+  // Kick-off is stored the same way — what SIDE A did — and this page speaks
+  // entirely in the coach's own terms, so it flips with the seat exactly as
+  // outlook does. Without this a coach on side B taps "Kicked" and the app
+  // records that their opponent kicked, which is how Karl's board read
+  // backwards on the dashboard at Sheffield.
+  const myKickoff = mine === 'a' ? live.kickoff : flipKickoff(live.kickoff)
+  const setMyKickoff = (next: Kickoff) =>
+    push({ ...live, kickoff: mine === 'a' ? next : flipKickoff(next) })
   const disabled = connection !== 'live'
   const result = resultOf({
     a: { ...board.a, score: live.aScore },
@@ -345,9 +355,9 @@ export function MyBoard({
           <button
             key={k}
             type="button"
-            className={`mb-pill${live.kickoff === k ? ' is-on' : ''}`}
+            className={`mb-pill${myKickoff === k ? ' is-on' : ''}`}
             disabled={disabled || locked}
-            onClick={() => push({ ...live, kickoff: live.kickoff === k ? null : k })}
+            onClick={() => setMyKickoff(myKickoff === k ? null : k)}
           >
             {k === 'K' ? 'Kicked' : 'Received'}
           </button>

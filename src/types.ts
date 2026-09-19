@@ -157,6 +157,18 @@ export interface OurSeat {
 }
 
 /**
+ * Kick-off from the other side's point of view.
+ *
+ * `kickoff` records what SIDE A did, so for side B it reads the other way: the
+ * coach who did not kick received. Exported because two places need it and they
+ * must not drift — the mirrored dashboard card, and a coach on side B reporting
+ * their own board, where getting it wrong writes the opposite of what they tapped.
+ */
+export function flipKickoff(kickoff: Kickoff): Kickoff {
+  return kickoff === 'K' ? 'R' : kickoff === 'R' ? 'K' : null
+}
+
+/**
  * The same board seen from the other end.
  *
  * Outlook is stored from side A's point of view, so it has to invert with the
@@ -168,7 +180,7 @@ export function mirrorBoard(board: Board): Board {
     ...board,
     a: board.b,
     b: board.a,
-    kickoff: board.kickoff === 'K' ? 'R' : board.kickoff === 'R' ? 'K' : null,
+    kickoff: flipKickoff(board.kickoff),
     outlook: (board.outlook === 0 ? 0 : -board.outlook) as Outlook,
   }
 }

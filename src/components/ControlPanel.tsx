@@ -117,7 +117,11 @@ function ControlRow({ board, controller, countryA, countryB }: RowProps) {
               onClick={() => setKickoff(board.id, side)}
               disabled={locked || ft}
               aria-pressed={board.kickoff === side}
-              title={side === 'K' ? 'Home side kicked off' : 'Home side received'}
+              // Named, not "home side". K and R are stored against side A, and
+              // at an open event a coordinator is often also a coach sitting on
+              // side B — "home" then reads as "me" and the board goes in
+              // backwards. The coach's own name cannot be misread.
+              title={`${board.a.nafName} ${side === 'K' ? 'kicked off' : 'received'}`}
             >
               {side}
             </button>
