@@ -18,6 +18,14 @@
       "database_id": "505406d3-dc0a-4e94-ae30-17a295a506db"
     }
   ],
+  // Once a minute, so the Worker can follow a tournament's draw on its own.
+  // Almost every firing is a no-op: the handler asks whether any tournament has
+  // an open watch window and returns immediately when none has, which is the
+  // case except during an event somebody has armed.
+  "triggers": {
+    "crons": ["* * * * *"]
+  },
+
   // Wrangler creates the DNS record for this hostname on deploy, provided the
   // englandbb.co.uk zone sits on the same Cloudflare account.
   "routes": [

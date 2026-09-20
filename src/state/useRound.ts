@@ -12,6 +12,7 @@ import {
   chooseTeam,
   chooseTournament,
   setCasualtyMode,
+  setWatch,
   setOpenCoordinator,
   setProvisional,
   saveRound,
@@ -118,6 +119,7 @@ export interface RoundController {
   setProvisional: (provisional: boolean) => void
   /** Switches the casualty reading for everyone; clears the round's casualties. */
   setCasualtyMode: (mode: CasualtyMode) => void
+  setWatch: (watch: { from: string; untilRound: number } | null) => void
   /** Lends the coordinator's powers to everyone signed in, or takes them back. */
   setOpenCoordinator: (open: boolean) => void
   setKickoff: (boardId: number, kickoff: Kickoff) => void
@@ -565,6 +567,20 @@ export function useRound(options: { canSync?: boolean } = {}): RoundController {
     }
   }, [])
 
+  /** Arms or disarms the Worker's unattended watch on this tournament. */
+  const applyWatch = useCallback(
+    async (watch: { from: string; untilRound: number } | null) => {
+      try {
+        const fresh = await setWatch(watch)
+        setRound(fresh)
+        setBaseline(fresh)
+      } catch (cause) {
+        setSaveError(cause instanceof Error ? cause.message : String(cause))
+      }
+    },
+    [],
+  )
+
   const applyCasualtyMode = useCallback(async (mode: CasualtyMode) => {
     try {
       // The server clears the round's casualties on a real change, so the whole
@@ -658,6 +674,7 @@ export function useRound(options: { canSync?: boolean } = {}): RoundController {
     pinging,
     setProvisional: (provisional: boolean) => void applyProvisional(provisional),
     setCasualtyMode: (mode: CasualtyMode) => void applyCasualtyMode(mode),
+    setWatch: (watch: { from: string; untilRound: number } | null) => void applyWatch(watch),
     setOpenCoordinator: (open: boolean) => void applyOpenCoordinator(open),
     discard,
     save: () => void save(),

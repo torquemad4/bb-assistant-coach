@@ -248,6 +248,11 @@ export interface Round {
   /** The team being shown — the viewer's, or the one they picked. */
   shownTeam: string | null
   /**
+   * The unattended watch: when the Worker starts following this tournament's
+   * draw, and the last round it follows. Both null when nothing is armed.
+   */
+  watch: { from: string | null; untilRound: number | null }
+  /**
    * True when this viewer may not change tournament — a coach whose own
    * tournament is live is held to it.
    */

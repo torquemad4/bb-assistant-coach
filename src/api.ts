@@ -67,6 +67,18 @@ export function currentTeam(): string | null {
  * ignores it for a coach who is in a team, so nobody can watch away from their
  * own boards by editing a URL.
  */
+/**
+ * Arms or disarms the unattended watch on the tournament being looked at.
+ *
+ * `null` disarms. Otherwise both halves go together: a start time with no last
+ * round is a poll with nothing to stop it.
+ */
+export async function setWatch(
+  watch: { from: string; untilRound: number } | null,
+): Promise<Round> {
+  return normalise(await post('/api/settings', { watch }))
+}
+
 export function chooseTeam(team: string | null) {
   chosenTeam = team
   try {
@@ -146,6 +158,10 @@ function normalise(payload: any): Round {
     teams: Array.isArray(payload.teams) ? payload.teams : [],
     viewerTeam: typeof payload.viewerTeam === 'string' ? payload.viewerTeam : null,
     shownTeam: typeof payload.shownTeam === 'string' ? payload.shownTeam : null,
+    watch: {
+      from: payload.watch?.from ?? null,
+      untilRound: payload.watch?.untilRound ?? null,
+    },
     openCoordinator: payload.openCoordinator === true,
     tournamentLocked: payload.tournamentLocked === true,
     scout: payload.scout ?? null,

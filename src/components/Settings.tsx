@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { CASUALTY_LABEL, SQUAD_DEFAULT, SQUAD_SNOTLING } from '../casualties'
 import { TourplayPanel } from './TourplayPanel'
 import type { RoundController } from '../state/useRound'
@@ -30,6 +30,10 @@ export function Settings(controller: RoundController) {
 
       <section className="set-group" aria-label="Access">
         <OpenCoordinatorRow controller={controller} offline={offline} />
+      </section>
+
+      <section className="set-group" aria-label="Follow the draw">
+        <WatchRow controller={controller} offline={offline} />
       </section>
 
       <p className="set-foot">
@@ -213,5 +217,119 @@ function OpenCoordinatorRow({ controller, offline }: RowProps) {
         </button>
       )}
     </Row>
+  )
+}
+
+/**
+ * Arms the Worker to follow this tournament's draw by itself.
+ *
+ * The point is that nobody has to watch Tourplay. From the start time the
+ * Worker looks every minute for a draw, imports it the moment it appears, then
+ * rests to five-minute checks while the round is played and speeds up again
+ * when it finishes. It stops itself once the last round named here is done, so
+ * an armed event cannot leave it polling for ever.
+ *
+ * Local time in, UTC out: a coordinator types the time on the hall clock, and
+ * the input gives it back in the browser's own zone, which is the venue's.
+ */
+function WatchRow({
+  controller,
+  offline,
+}: {
+  controller: RoundController
+  offline: boolean
+}) {
+  const { round } = controller
+  const armed = round.watch.from !== null
+
+  // The stored value is UTC; the input wants local wall-clock.
+  const asLocalInput = (utc: string | null) => {
+    if (!utc) return ''
+    const d = new Date(utc.replace(' ', 'T') + 'Z')
+    if (Number.isNaN(d.getTime())) return ''
+    const pad = (n: number) => String(n).padStart(2, '0')
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  }
+
+  const [from, setFrom] = useState(() => asLocalInput(round.watch.from))
+  const [until, setUntil] = useState(() => String(round.watch.untilRound ?? ''))
+
+  // Somebody else arming it, or the watch finishing and clearing itself, has
+  // to show here rather than leaving a stale form looking authoritative.
+  useEffect(() => {
+    setFrom(asLocalInput(round.watch.from))
+    setUntil(String(round.watch.untilRound ?? ''))
+  }, [round.watch.from, round.watch.untilRound])
+
+  const untilRound = Number(until)
+  const canArm =
+    from !== '' && Number.isInteger(untilRound) && untilRound >= 1 && !Number.isNaN(Date.parse(from))
+
+  return (
+    <div className="set-row set-row--watch">
+      <div className="set-row__text">
+        <span className="set-row__label">Follow the draw</span>
+        <span className="set-row__note">
+          {armed ? (
+            <>
+              Armed. From <strong>{new Date(round.watch.from!.replace(' ', 'T') + 'Z').toLocaleString()}</strong>{' '}
+              the app imports each round as it is drawn, and stops after round{' '}
+              <strong>{round.watch.untilRound}</strong>. Nobody needs to press anything.
+            </>
+          ) : (
+            <>
+              Off. Give a start time and the last round worth following, and the app
+              will pull each round in as it goes up — every minute while it waits for
+              a draw, every five while one is being played.
+            </>
+          )}
+        </span>
+      </div>
+
+      <div className="set-watch">
+        <label className="set-watch__field">
+          <span>Start</span>
+          <input
+            type="datetime-local"
+            value={from}
+            disabled={offline}
+            onChange={(e) => setFrom(e.target.value)}
+          />
+        </label>
+        <label className="set-watch__field set-watch__field--round">
+          <span>Until round</span>
+          <input
+            type="number"
+            min={1}
+            max={20}
+            value={until}
+            disabled={offline}
+            onChange={(e) => setUntil(e.target.value)}
+          />
+        </label>
+        <div className="set-watch__acts">
+          <button
+            type="button"
+            className="set-btn"
+            disabled={offline || !canArm}
+            onClick={() =>
+              controller.setWatch({ from: new Date(from).toISOString(), untilRound })
+            }
+          >
+            {armed ? 'Update' : 'Arm'}
+          </button>
+          {armed && (
+            <button
+              type="button"
+              className="set-btn set-btn--off"
+              disabled={offline}
+              onClick={() => controller.setWatch(null)}
+            >
+              Stop
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
   )
 }

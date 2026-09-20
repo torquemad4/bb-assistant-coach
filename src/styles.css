@@ -3497,3 +3497,63 @@ h1 {
   background: var(--ink);
   color: var(--bg);
 }
+
+/* Arming the unattended watch. Two fields and a button rather than a toggle,
+   because it is not on or off — it is on from a time, until a round. */
+.set-watch {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.set-watch__field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 0.7rem;
+  font-weight: 650;
+  color: var(--ink-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.set-watch__field input {
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.85rem;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.set-watch__field--round input {
+  width: 5.5rem;
+}
+
+.set-watch__acts {
+  display: flex;
+  gap: 6px;
+}
+
+.set-btn--off {
+  border-color: var(--bad-line, var(--line));
+  color: var(--bad, var(--ink-dim));
+}
+
+@media (max-width: 560px) {
+  .set-watch {
+    width: 100%;
+  }
+
+  .set-watch__field {
+    flex: 1 1 auto;
+  }
+
+  .set-watch__field input {
+    width: 100%;
+  }
+}

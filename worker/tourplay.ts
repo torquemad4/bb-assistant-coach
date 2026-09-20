@@ -129,6 +129,15 @@ export interface LiveRound {
   phaseId: number
   currentRound: number
   matches: LiveMatch[]
+  /**
+   * Whether Tourplay considers the current round finished — every match in it
+   * reported. Its own count, not ours: a board can be over on the table long
+   * before anybody enters the result, and the unattended watch must follow the
+   * organiser's view of the round rather than guess from scores.
+   *
+   * Null when Tourplay says nothing, which is not the same as "not finished".
+   */
+  roundCompleted: boolean | null
 }
 
 function side(roster: any): LiveSide {
@@ -242,5 +251,13 @@ export async function fetchLiveRound(slug: string, withHalf = true): Promise<Liv
     )
   }
 
-  return { phaseId, currentRound: phases.currentRound ?? 0, matches }
+  const currentRound = phases.currentRound ?? 0
+  const progress = (phases.rounds ?? []).find((r: any) => r?.roundNumber === currentRound)
+  const done = progress?.roundProgresion?.isCompleted
+  return {
+    phaseId,
+    currentRound,
+    matches,
+    roundCompleted: typeof done === 'boolean' ? done : null,
+  }
 }

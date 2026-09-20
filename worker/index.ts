@@ -185,6 +185,10 @@ interface TournamentRow {
   open_coordinator: number | null
   /** 'ours' makes the dashboard one card per coach of ours — see migration 0013. */
   dashboard_mode: string | null
+  /** When the unattended watch starts, and the last round it follows. */
+  watch_from: string | null
+  watch_until_round: number | null
+  last_watched_at: string | null
 }
 
 interface RoundRow {
@@ -543,6 +547,10 @@ async function readState(
     dashboardMode,
     ourSeats,
     offDraw,
+    watch: {
+      from: tournament.watch_from ?? null,
+      untilRound: tournament.watch_until_round ?? null,
+    },
     teams,
     viewerTeam,
     shownTeam,
@@ -862,6 +870,196 @@ const COORDINATOR_PATHS = new Set([
   '/api/board-order',
   '/api/settings',
 ])
+
+/**
+ * Writes a round's boards, naming the coaches as NAF knows them.
+ *
+ * Two hops to a name — Tourplay player id to NAF number from the entry list,
+ * NAF number to handle from the Scout engine — and both fail soft: a coach
+ * with no NAF number, or an engine that is down, keeps the Tourplay name
+ * rather than blanking the board.
+ *
+ * The NAF number is stored for its own sake. Nothing wrote one before, which
+ * is why an imported round could not tell which board belonged to whoever was
+ * signing in.
+ *
+ * Every read happens before the single write batch, so a Tourplay or engine
+ * failure leaves the round exactly as it was. The import used to update the
+ * tournament, then fetch, then write, and at Sheffield it died in the middle
+ * twice — leaving a linked tournament with no boards and no error a coach
+ * could act on.
+ */
+async function writeRoundBoards(
+  env: Env,
+  slug: string,
+  roundId: number,
+  matches: LiveMatch[],
+): Promise<void> {
+  const nafByPlayer = await fetchNafNumbers(slug)
+  const nafNumberOf = (sideOf: { playerId: string | null }) =>
+    sideOf.playerId ? nafByPlayer.get(String(sideOf.playerId)) ?? null : null
+  const handles = await nafHandles(
+    matches.flatMap((m) => [nafNumberOf(m.local), nafNumberOf(m.visitor)]),
+    env.SCOUT_API_URL,
+  )
+  const displayName = (sideOf: { coach: string; playerId: string | null }) => {
+    const naf = nafNumberOf(sideOf)
+    return chooseName(sideOf.coach || 'Unknown', naf == null ? null : handles.get(naf))
+  }
+
+  const statements: D1PreparedStatement[] = [
+    env.DB.prepare('DELETE FROM board WHERE round_id = ?').bind(roundId),
+  ]
+  matches.forEach((m, index) => {
+    statements.push(
+      env.DB.prepare(
+        `INSERT INTO board (round_id, board_no, a_naf_name, a_naf_number, a_race, a_score,
+                            a_injuries, b_naf_name, b_naf_number, b_race, b_score,
+                            b_injuries, period, outlook, tourplay_match_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '1', 0, ?)`,
+      ).bind(
+        roundId,
+        index + 1,
+        displayName(m.local),
+        nafNumberOf(m.local),
+        m.local.race || '',
+        m.local.score,
+        m.local.injuries,
+        displayName(m.visitor),
+        nafNumberOf(m.visitor),
+        m.visitor.race || '',
+        m.visitor.score,
+        m.visitor.injuries,
+        String(m.matchId),
+      ),
+    )
+  })
+  statements.push(
+    env.DB.prepare("UPDATE round SET updated_at = datetime('now') WHERE id = ?").bind(roundId),
+  )
+  await env.DB.batch(statements)
+}
+
+/** How long a round being played is left alone between checks. */
+const WATCH_PLAYING_MS = 5 * 60 * 1000
+
+/**
+ * Follows an armed tournament's draw, once a minute, unattended.
+ *
+ * The cadence is Karl's: while there is no new draw, look every minute,
+ * because the gap between a draw going up and coaches wanting it on their
+ * phones is the whole point. While a round is being played nothing can change
+ * that matters, so look every five.
+ *
+ * Deliberately stateless between firings. Everything it needs — which round we
+ * hold, whether Tourplay has moved on, when it last looked — is in the
+ * database, so a missed firing or a redeploy costs one tick and nothing else.
+ *
+ * It only ever ADDS a round. It never rewrites one that is already imported,
+ * so a coordinator's corrections and a coach's entries are safe from it. The
+ * one exception is a round row with no boards, which is not a round anybody
+ * entered anything into — it is the wreckage of a failed import, and filling
+ * it in is the repair.
+ */
+async function followArmedTournaments(env: Env): Promise<void> {
+  const now = Date.now()
+  const armed = await env.DB.prepare(
+    `SELECT * FROM tournament
+      WHERE watch_from IS NOT NULL
+        AND tourplay_slug IS NOT NULL
+        AND datetime('now') >= watch_from`,
+  ).all<TournamentRow & { watch_until_round: number | null; last_watched_at: string | null }>()
+
+  for (const t of armed.results ?? []) {
+    // Our own high-water mark, and whether that round is real. A round row with
+    // no boards is a failed import, not an imported round.
+    const held = await env.DB.prepare(
+      `SELECT r.id, r.round_number, (SELECT COUNT(*) FROM board b WHERE b.round_id = r.id) AS boards
+         FROM round r WHERE r.tournament_id = ?
+        ORDER BY r.round_number DESC LIMIT 1`,
+    )
+      .bind(t.id)
+      .first<{ id: number; round_number: number; boards: number }>()
+
+    // Pacing. A round of ours that is complete on Tourplay is not what we are
+    // waiting for, so the five-minute rest only applies while one is live —
+    // which is exactly when the previous tick left `last_watched_at` set.
+    const last = t.last_watched_at ? Date.parse(t.last_watched_at + 'Z') : 0
+    const resting = Number.isFinite(last) && now - last < WATCH_PLAYING_MS
+    if (resting && held && held.boards > 0) continue
+
+    let live
+    try {
+      live = await fetchLiveRound(t.tourplay_slug!, false)
+    } catch (cause) {
+      // Tourplay being unreachable is a normal event-day occurrence, so the
+      // watch survives it and tries again next minute. Logged rather than
+      // swallowed: nobody is watching this run, and a watch that fails every
+      // tick for an hour looks exactly like a watch that is working until
+      // somebody asks why no round arrived.
+      console.error(`watch: ${t.name} — Tourplay read failed:`, cause)
+      continue
+    }
+
+    const liveRound = live.currentRound || 1
+    const completed = live.roundCompleted === true
+
+    // A draw we do not hold yet — or one we hold only as an empty shell.
+    const needsImport = !held || liveRound > held.round_number || held.boards === 0
+    if (needsImport && live.matches.length > 0) {
+      const matches = [...live.matches].sort((a, b) => a.order - b.order).slice(0, MAX_BOARDS)
+      let roundId = held && held.round_number === liveRound ? held.id : undefined
+      if (!roundId) {
+        const created = await env.DB.prepare(
+          'INSERT INTO round (tournament_id, round_number) VALUES (?, ?) RETURNING id',
+        )
+          .bind(t.id, liveRound)
+          .first<{ id: number }>()
+        roundId = created!.id
+      }
+      try {
+        await writeRoundBoards(env, t.tourplay_slug!, roundId!, matches)
+      } catch (cause) {
+        // The round row may now exist with no boards. That is recoverable —
+        // the next tick sees a round with zero boards and fills it — so say so
+        // and leave it, rather than deleting a round somebody may be looking at.
+        console.error(`watch: ${t.name} — round ${liveRound} boards failed:`, cause)
+        continue
+      }
+      await setActive(env.DB, t.id, roundId!)
+      console.log(`watch: ${t.name} — imported round ${liveRound}, ${matches.length} boards`)
+      await env.DB.prepare(
+        "UPDATE tournament SET tourplay_phase_id = ?, last_watched_at = datetime('now') WHERE id = ?",
+      )
+        .bind(live.phaseId, t.id)
+        .run()
+      continue
+    }
+
+    // Nothing to import. If the round we are on has finished, go back to
+    // looking every minute for the next one — and stop altogether once the
+    // last round worth following is done, so an armed event cannot leave the
+    // cron polling Tourplay for ever.
+    if (completed) {
+      const lastWanted = t.watch_until_round
+      if (lastWanted != null && liveRound >= lastWanted) {
+        await env.DB.prepare('UPDATE tournament SET watch_from = NULL, last_watched_at = NULL WHERE id = ?')
+          .bind(t.id)
+          .run()
+      } else {
+        await env.DB.prepare('UPDATE tournament SET last_watched_at = NULL WHERE id = ?')
+          .bind(t.id)
+          .run()
+      }
+      continue
+    }
+
+    // A round is being played. Rest for five minutes.
+    await env.DB.prepare("UPDATE tournament SET last_watched_at = datetime('now') WHERE id = ?")
+      .bind(t.id)
+      .run()
+  }
+}
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -1236,8 +1434,26 @@ export default {
       }
       const wantsMode = body?.casualtyMode !== undefined
       const wantsOpen = body?.openCoordinator !== undefined
-      if (!wantsMode && !wantsOpen) {
+      const wantsWatch = body?.watch !== undefined
+      if (!wantsMode && !wantsOpen && !wantsWatch) {
         return json({ error: 'Nothing to set' }, 400)
+      }
+      // `watch: null` disarms. Otherwise both fields are required together:
+      // a start with no last round is a poll with no way to stop.
+      let watchFrom: string | null = null
+      let watchUntil: number | null = null
+      if (wantsWatch && body.watch !== null) {
+        const from = Date.parse(String(body.watch?.from ?? ''))
+        const until = Number(body.watch?.untilRound)
+        if (!Number.isFinite(from)) {
+          return json({ error: 'watch.from must be a date and time' }, 400)
+        }
+        if (!Number.isInteger(until) || until < 1 || until > 20) {
+          return json({ error: 'watch.untilRound must be a round number' }, 400)
+        }
+        // Stored as the SQLite comparison format the handler uses, in UTC.
+        watchFrom = new Date(from).toISOString().slice(0, 19).replace('T', ' ')
+        watchUntil = until
       }
       if (wantsMode && body.casualtyMode !== 'removals' && body.casualtyMode !== 'players') {
         return json({ error: "casualtyMode must be 'removals' or 'players'" }, 400)
@@ -1270,6 +1486,20 @@ export default {
           env.DB
             .prepare('UPDATE tournament SET open_coordinator = ? WHERE id = ?')
             .bind(body.openCoordinator ? 1 : 0, active.tournament.id),
+        )
+      }
+      if (wantsWatch) {
+        if (watchFrom !== null && !active.tournament.tourplay_slug) {
+          return json({ error: 'Link this tournament to Tourplay before arming the watch' }, 400)
+        }
+        statements.push(
+          env.DB
+            .prepare(
+              `UPDATE tournament
+                  SET watch_from = ?, watch_until_round = ?, last_watched_at = NULL
+                WHERE id = ?`,
+            )
+            .bind(watchFrom, watchUntil, active.tournament.id),
         )
       }
       if (statements.length > 0) await env.DB.batch(statements)
@@ -1648,58 +1878,7 @@ export default {
         roundId = created!.id
       }
 
-      // Who these coaches are on NAF, rather than what they called themselves on
-      // Tourplay. Two hops — Tourplay player id to NAF number from the entry
-      // list, NAF number to handle from the Scout engine — and both fail soft:
-      // a coach with no NAF number, or an engine that is down, leaves the
-      // Tourplay name in place rather than blanking the board.
-      //
-      // The NAF number is worth storing for its own sake. Nothing was writing
-      // one before, which is why an imported round could not tell which board
-      // belonged to the coach signing in.
-      const nafByPlayer = await fetchNafNumbers(slug)
-      const nafNumberOf = (sideOf: { playerId: string | null }) =>
-        sideOf.playerId ? nafByPlayer.get(String(sideOf.playerId)) ?? null : null
-      const handles = await nafHandles(
-        matches.flatMap((m) => [nafNumberOf(m.local), nafNumberOf(m.visitor)]),
-        env.SCOUT_API_URL,
-      )
-      const displayName = (sideOf: { coach: string; playerId: string | null }) => {
-        const naf = nafNumberOf(sideOf)
-        return chooseName(sideOf.coach || 'Unknown', naf == null ? null : handles.get(naf))
-      }
-
-      const statements: D1PreparedStatement[] = [
-        env.DB.prepare('DELETE FROM board WHERE round_id = ?').bind(roundId),
-      ]
-      matches.forEach((m, index) => {
-        statements.push(
-          env.DB.prepare(
-            `INSERT INTO board (round_id, board_no, a_naf_name, a_naf_number, a_race, a_score,
-                                a_injuries, b_naf_name, b_naf_number, b_race, b_score,
-                                b_injuries, period, outlook, tourplay_match_id)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '1', 0, ?)`,
-          ).bind(
-            roundId,
-            index + 1,
-            displayName(m.local),
-            nafNumberOf(m.local),
-            m.local.race || '',
-            m.local.score,
-            m.local.injuries,
-            displayName(m.visitor),
-            nafNumberOf(m.visitor),
-            m.visitor.race || '',
-            m.visitor.score,
-            m.visitor.injuries,
-            String(m.matchId),
-          ),
-        )
-      })
-      statements.push(
-        env.DB.prepare("UPDATE round SET updated_at = datetime('now') WHERE id = ?").bind(roundId),
-      )
-      await env.DB.batch(statements)
+      await writeRoundBoards(env, slug, roundId!, matches)
       await setActive(env.DB, tournamentId!, roundId!)
 
       return json({ ...(await readState(env.DB, view)), linked: true, imported: matches.length })
@@ -1852,5 +2031,13 @@ export default {
     }
 
     return json({ error: `${request.method} not allowed` }, 405)
+  },
+
+  /**
+   * Cloudflare's cron, once a minute. Almost every firing does nothing: with
+   * no tournament armed the first query matches no rows and the handler ends.
+   */
+  async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    ctx.waitUntil(followArmedTournaments(env))
   },
 } satisfies ExportedHandler<Env>

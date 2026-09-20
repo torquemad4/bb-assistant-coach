@@ -25,6 +25,7 @@ export const SEED_ROUND: Round = {
   teams: [],
   viewerTeam: null,
   shownTeam: null,
+  watch: { from: null, untilRound: null },
   openCoordinator: false,
   tournamentLocked: true,
   scout: null,
