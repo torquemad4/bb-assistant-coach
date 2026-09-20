@@ -46,4 +46,16 @@ INSERT INTO coach_identity (email, naf_number, display_name, is_admin) VALUES
   -- and live when the EurOpen is.
   ('thehexbaron@gmail.com',    32494, 'HexBaron', 0),
   ('bennes3@gmail.com',         27311, 'El_Spoonio', 0),
-  ('nicholasjamesdean@gmail.com', 26658, 'JuJuu', 0);
+  ('nicholasjamesdean@gmail.com', 26658, 'JuJuu', 0),
+  -- The last two of the pathway squad to get logins. Both were on boards
+  -- before they could sign in: a coach is matched to a board by NAF number,
+  -- so they showed on everyone's dashboard while having no board of their own
+  -- to report.
+  --
+  -- Emails are stored lower case because they are compared exactly. Access
+  -- lower-cases the address in the token before the lookup, so a row stored
+  -- with a capital letter never matches — the coach reaches the app and is
+  -- silently a read-only watcher with no board, which looks like a roster
+  -- mistake rather than a spelling one.
+  ('paulgegg@gmail.com',        70,    'Geggster', 0),
+  ('jacobtodd@gmail.com',       24508, 'punchymcragefists', 0);
