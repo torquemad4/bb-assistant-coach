@@ -417,7 +417,13 @@ async function setActive(db: D1Database, tournamentId: number, roundId: number) 
 /** The whole payload the app needs: the selectors plus the round on screen. */
 async function readState(
   db: D1Database,
-  view: { id: number | null; locked: boolean; choices: number[] },
+  view: {
+    id: number | null
+    locked: boolean
+    choices: number[]
+    nafNumber?: number | null
+    wantedTeam?: string | null
+  },
 ) {
   const active = await resolveActive(db, view.id)
   if (!active) return null
@@ -449,15 +455,40 @@ async function readState(
   const dashboardMode = tournament.dashboard_mode === 'ours' ? 'ours' : 'fixture'
   let ourSeats: { boardId: number; side: 'a' | 'b' }[] = []
   let offDraw: { nafNumber: number; name: string }[] = []
+  let teams: string[] = []
+  let viewerTeam: string | null = null
+  let shownTeam: string | null = null
   if (dashboardMode === 'ours') {
     // A named squad wins over the derived one. See migration 0014: at an open
     // event the people Karl is watching are his own selection, not whoever
     // happens to hold a login.
     const squad = await db
-      .prepare('SELECT naf_number, display_name FROM tournament_squad WHERE tournament_id = ?')
+      .prepare(
+        `SELECT naf_number, display_name, team FROM tournament_squad
+          WHERE tournament_id = ? ORDER BY team, display_name`,
+      )
       .bind(tournament.id)
-      .all<{ naf_number: number; display_name: string }>()
-    const named = squad.results ?? []
+      .all<{ naf_number: number; display_name: string; team: string }>()
+    const allNamed = squad.results ?? []
+
+    // The teams on show. A squad with no team named is one unnamed team, which
+    // is what a single-squad event already was, so `teams` stays empty there
+    // and nothing downstream changes.
+    teams = [...new Set(allNamed.map((m) => m.team).filter((t) => t !== ''))]
+
+    // A coach sees their own team. Anyone with no team of their own — a
+    // coordinator, or somebody not playing — picks, and falls back to the
+    // first team so the dashboard is never blank while they decide.
+    viewerTeam =
+      allNamed.find((m) => view.nafNumber != null && m.naf_number === view.nafNumber)?.team || null
+    if (viewerTeam === '') viewerTeam = null
+    shownTeam =
+      viewerTeam ??
+      (view.wantedTeam && teams.includes(view.wantedTeam) ? view.wantedTeam : null) ??
+      teams[0] ??
+      null
+
+    const named = shownTeam === null ? allNamed : allNamed.filter((m) => m.team === shownTeam)
     const rows = await db
       .prepare(
         // EXISTS rather than a join: two roster rows carrying the same NAF
@@ -512,6 +543,9 @@ async function readState(
     dashboardMode,
     ourSeats,
     offDraw,
+    teams,
+    viewerTeam,
+    shownTeam,
     tournaments: (tournaments.results as any[]).map((t) => ({
       id: t.id,
       name: t.name,
@@ -843,11 +877,20 @@ export default {
     // is per device — two people can be on different tournaments at once — and
     // so a POST does not have to spend its single body read on it.
     const askedFor = Number(url.searchParams.get('t'))
-    const view = await tournamentForViewer(
-      env.DB,
-      viewer,
-      Number.isInteger(askedFor) && askedFor > 0 ? askedFor : null,
-    )
+    const view = {
+      ...(await tournamentForViewer(
+        env.DB,
+        viewer,
+        Number.isInteger(askedFor) && askedFor > 0 ? askedFor : null,
+      )),
+      // Who is looking, for the team dashboards. Carried on `view` rather than
+      // passed alongside it because nineteen call sites hand `view` to
+      // readState and none of them should have to care.
+      nafNumber: viewer.nafNumber,
+      // Which team a viewer with no team of their own chose to watch. Per
+      // device, like the tournament, and ignored for anyone who has a team.
+      wantedTeam: (url.searchParams.get('team') || '').trim() || null,
+    }
 
     const writing = request.method !== 'GET' && request.method !== 'HEAD'
     if (writing && (COORDINATOR_PATHS.has(path) || path === '/api/round')) {

@@ -3470,3 +3470,30 @@ h1 {
   font-weight: 700;
   color: var(--ink);
 }
+
+/* Which team to watch, for a viewer who is not in one. Sits in the legend
+   rather than the header: it changes what the dashboard is about, and it is
+   meaningless on every other tab. */
+.legend__teams {
+  display: inline-flex;
+  gap: 4px;
+  margin-left: 0.5rem;
+}
+
+.legend__team-btn {
+  padding: 2px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-dim);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.legend__team-btn.is-on {
+  border-color: transparent;
+  background: var(--ink);
+  color: var(--bg);
+}

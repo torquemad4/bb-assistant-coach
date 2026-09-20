@@ -14,7 +14,7 @@ import { mirrorBoard, type Board } from '../types'
  * turn up on either side. Two of ours drawn against each other therefore show
  * twice, the same match mirrored, so each of them has their own card.
  */
-export function Dashboard({ round, aggregate, aggregateRange }: RoundController) {
+export function Dashboard({ round, aggregate, aggregateRange, switchTeam }: RoundController) {
   const ours = round.dashboardMode === 'ours'
 
   // A board with two of ours on it is one game shown twice, once from each of
@@ -49,7 +49,7 @@ export function Dashboard({ round, aggregate, aggregateRange }: RoundController)
         <div className="dashboard__legend">
           <span className="legend__team legend__team--a">
             <Flag country={round.teamA.country} />
-            {round.teamA.name}
+            {round.shownTeam ?? round.teamA.name}
           </span>
           <span className="legend__vs">·</span>
           <span className="legend__ours">
@@ -58,6 +58,23 @@ export function Dashboard({ round, aggregate, aggregateRange }: RoundController)
               : `${cards.length} of ours playing`}
             {round.offDraw.length > 0 && ` · ${round.offDraw.length} in the Round Robin`}
           </span>
+          {/* Only for somebody with no team of their own. A coach in a team
+              never sees this, and the server would refuse them anyway. */}
+          {round.viewerTeam === null && round.teams.length > 1 && (
+            <span className="legend__teams" role="group" aria-label="Team to watch">
+              {round.teams.map((team) => (
+                <button
+                  key={team}
+                  type="button"
+                  className={`legend__team-btn${team === round.shownTeam ? ' is-on' : ''}`}
+                  aria-pressed={team === round.shownTeam}
+                  onClick={() => switchTeam(team)}
+                >
+                  {team}
+                </button>
+              ))}
+            </span>
+          )}
         </div>
       ) : (
         <div className="dashboard__legend">

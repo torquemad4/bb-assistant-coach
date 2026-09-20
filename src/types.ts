@@ -239,6 +239,15 @@ export interface Round {
    */
   offDraw: OffDrawMember[]
   /**
+   * The teams this event's squad is split into. Empty when the squad is one
+   * group, which is every event before BBalls.
+   */
+  teams: string[]
+  /** The viewer's own team, when they are in one. They cannot look away from it. */
+  viewerTeam: string | null
+  /** The team being shown — the viewer's, or the one they picked. */
+  shownTeam: string | null
+  /**
    * True when this viewer may not change tournament — a coach whose own
    * tournament is live is held to it.
    */

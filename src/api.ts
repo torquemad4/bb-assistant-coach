@@ -46,10 +46,44 @@ export function chooseTournament(id: number | null) {
   }
 }
 
-/** Appends the chosen tournament, so every request agrees on which one it means. */
+const TEAM_KEY = 'bb-coordinator-team'
+
+let chosenTeam: string | null = (() => {
+  try {
+    return localStorage.getItem(TEAM_KEY) || null
+  } catch {
+    return null
+  }
+})()
+
+export function currentTeam(): string | null {
+  return chosenTeam
+}
+
+/**
+ * Which team a viewer with no team of their own is watching.
+ *
+ * Per device, like the tournament, and only ever a request for one: the server
+ * ignores it for a coach who is in a team, so nobody can watch away from their
+ * own boards by editing a URL.
+ */
+export function chooseTeam(team: string | null) {
+  chosenTeam = team
+  try {
+    if (team == null) localStorage.removeItem(TEAM_KEY)
+    else localStorage.setItem(TEAM_KEY, team)
+  } catch {
+    /* a device that will not remember still works for this session */
+  }
+}
+
+/** Appends the chosen tournament and team, so every request agrees what it means. */
 function scoped(path: string): string {
-  if (chosenTournament == null) return path
-  return `${path}${path.includes('?') ? '&' : '?'}t=${chosenTournament}`
+  const parts: string[] = []
+  if (chosenTournament != null) parts.push(`t=${chosenTournament}`)
+  if (chosenTeam != null) parts.push(`team=${encodeURIComponent(chosenTeam)}`)
+  if (parts.length === 0) return path
+  return `${path}${path.includes('?') ? '&' : '?'}${parts.join('&')}`
 }
 
 /** The mutable half of a board — the only fields a save is allowed to write. */
@@ -109,6 +143,9 @@ function normalise(payload: any): Round {
     dashboardMode: payload.dashboardMode === 'ours' ? 'ours' : 'fixture',
     ourSeats: Array.isArray(payload.ourSeats) ? payload.ourSeats : [],
     offDraw: Array.isArray(payload.offDraw) ? payload.offDraw : [],
+    teams: Array.isArray(payload.teams) ? payload.teams : [],
+    viewerTeam: typeof payload.viewerTeam === 'string' ? payload.viewerTeam : null,
+    shownTeam: typeof payload.shownTeam === 'string' ? payload.shownTeam : null,
     openCoordinator: payload.openCoordinator === true,
     tournamentLocked: payload.tournamentLocked === true,
     scout: payload.scout ?? null,

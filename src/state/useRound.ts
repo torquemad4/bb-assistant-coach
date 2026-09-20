@@ -9,6 +9,7 @@ import {
   moveBoard,
   pingScoutEngine,
   refreshScouting,
+  chooseTeam,
   chooseTournament,
   setCasualtyMode,
   setOpenCoordinator,
@@ -154,6 +155,7 @@ export interface RoundController {
    * tournaments are independent, so two people can be on different ones.
    */
   switchTournament: (tournamentId: number) => void
+  switchTeam: (team: string) => void
   addTournament: (name: string) => void
   previewLink: (slug: string) => void
   confirmLink: () => void
@@ -433,6 +435,28 @@ export function useRound(options: { canSync?: boolean } = {}): RoundController {
     }
   }, [])
 
+  /**
+   * Watch a different team, for a viewer who is not in one.
+   *
+   * Exactly like switching tournament: nothing is written, the choice rides on
+   * every request, and the server decides whether it is allowed — a coach who
+   * is in a team keeps seeing their own boards whatever this is set to.
+   */
+  const switchTeam = useCallback(async (team: string) => {
+    setSwitching(true)
+    try {
+      chooseTeam(team)
+      const fresh = await fetchRound()
+      setRound(fresh)
+      setBaseline(fresh)
+      setSyncError(null)
+    } catch (cause) {
+      setSyncError(cause instanceof Error ? cause.message : String(cause))
+    } finally {
+      setSwitching(false)
+    }
+  }, [])
+
   const switchTo = useCallback(async (tournamentId?: number, roundId?: number) => {
     setSwitching(true)
     try {
@@ -657,6 +681,7 @@ export function useRound(options: { canSync?: boolean } = {}): RoundController {
     switching,
     switchTo: (tournamentId?: number, roundId?: number) => void switchTo(tournamentId, roundId),
     switchTournament: (tournamentId: number) => void switchTournament(tournamentId),
+    switchTeam: (team: string) => void switchTeam(team),
     addTournament: (name: string) => void addTournament(name),
   }
 }

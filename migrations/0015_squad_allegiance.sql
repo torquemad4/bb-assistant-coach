@@ -1,0 +1,18 @@
+-- A squad belongs to a team, and a coach sees their own team's boards.
+--
+-- Migration 0014 let a tournament name one squad: the group being watched,
+-- against a field of strangers. BBalls is a four-a-side team event where we
+-- care about TWO of the teams — TE Open and Tactics and Theatrics — and the
+-- coaches in them are not a single audience. A TE Open coach wants their four
+-- boards; a Tactics and Theatrics coach wants theirs. One dashboard cannot be
+-- right for both, and showing all eight to everybody buries each of them in
+-- the other team's games.
+--
+-- So a squad row carries the team it belongs to, and "ours" stops meaning
+-- "the squad" and starts meaning "the team I am in". The viewer is already
+-- resolved on every request, so the server can answer that itself.
+--
+-- Empty string, not null, and a default, so the rows migration 0014 wrote
+-- keep working unchanged: a squad with no teams named is one team, which is
+-- exactly what it was.
+ALTER TABLE tournament_squad ADD COLUMN team TEXT NOT NULL DEFAULT '';
