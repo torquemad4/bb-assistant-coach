@@ -387,7 +387,26 @@ async function resolveActive(
       .bind(tournament.id)
       .first<RoundRow>()
   }
-  if (!round) return null
+
+  // Every tournament has at least a round 1 — adding one through the app
+  // creates it — and the whole app assumes it. A tournament without one
+  // answers nothing at all: `/api/round` 404s and the client reports it as
+  // "Not connected to the database", so one missing row reads as the database
+  // being down. BBalls was created by hand without a round and did exactly
+  // that. Healing it here is cheaper than a failure mode that misdiagnoses
+  // itself, and it happens once per tournament at most.
+  if (!round) {
+    const created = await db
+      .prepare('INSERT INTO round (tournament_id, round_number) VALUES (?, 1) RETURNING *')
+      .bind(tournament.id)
+      .first<RoundRow>()
+    if (!created) return null
+    round = created
+    await db
+      .prepare('UPDATE tournament SET active_round_id = ? WHERE id = ?')
+      .bind(created.id, tournament.id)
+      .run()
+  }
 
   // Anything other than the one alternative reads as removals, so a value that
   // predates this column or arrives corrupt fails safe to the original meaning.
@@ -538,9 +557,17 @@ async function readState(
     // this round's draw is accounted for rather than absent, and the dashboard
     // says where they are. Only a named squad can know this: a derived one
     // cannot tell a member who is elsewhere from one who is not at the event.
-    offDraw = named
-      .filter((m) => !playing.has(m.naf_number))
-      .map((m) => ({ nafNumber: m.naf_number, name: m.display_name }))
+    //
+    // Not before there IS a draw, though. A round with no boards is a round
+    // nobody has been left out of, and saying the whole squad is elsewhere is
+    // worse than saying nothing: an event set up days early would greet its
+    // coaches by telling them they are all sitting it out.
+    offDraw =
+      (rows.results ?? []).length === 0
+        ? []
+        : named
+            .filter((m) => !playing.has(m.naf_number))
+            .map((m) => ({ nafNumber: m.naf_number, name: m.display_name }))
   }
 
   return {
