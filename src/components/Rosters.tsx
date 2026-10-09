@@ -58,6 +58,19 @@ interface Slot {
   partial: boolean
 }
 
+/**
+ * How the page is cut. Nation and race pick one group at a time; "all picks"
+ * drops the picker and lays every nation's eight choices out at once, which is
+ * the view for "who took what" rather than "what is this squad".
+ */
+type Axis = 'nation' | 'race' | 'all'
+
+const AXES: { id: Axis; label: string }[] = [
+  { id: 'nation', label: 'By nation' },
+  { id: 'race', label: 'By race' },
+  { id: 'all', label: 'All picks' },
+]
+
 /** The order a coach reads the staff block in, not the order OCR found it. */
 const STAFF_ORDER: { key: string; label: string }[] = [
   { key: 'treasury', label: 'Treasury' },
@@ -95,7 +108,7 @@ function groupPlayers(players: { pos: string; added: string[] }[]) {
 export function Rosters() {
   const [doc, setDoc] = useState<RosterDoc | null>(null)
   const [failed, setFailed] = useState(false)
-  const [axis, setAxis] = useState<'nation' | 'race'>('nation')
+  const [axis, setAxis] = useState<Axis>('nation')
   const [group, setGroup] = useState<string | null>(null)
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState<Slot | null>(null)
@@ -155,7 +168,7 @@ export function Rosters() {
   const groups = useMemo(() => {
     const map = new Map<string, Slot[]>()
     for (const s of filtered) {
-      const key = axis === 'nation' ? s.nation : s.race
+      const key = axis === 'race' ? s.race : s.nation
       const list = map.get(key)
       if (list) list.push(s)
       else map.set(key, [s])
@@ -197,18 +210,18 @@ export function Rosters() {
     <div className="rosters">
       <div className="rosters__bar">
         <div className="rosters__axis" role="group" aria-label="Browse by">
-          {(['nation', 'race'] as const).map((a) => (
+          {AXES.map((a) => (
             <button
-              key={a}
+              key={a.id}
               type="button"
-              className={`rosters__axis-btn${axis === a ? ' is-on' : ''}`}
-              aria-pressed={axis === a}
+              className={`rosters__axis-btn${axis === a.id ? ' is-on' : ''}`}
+              aria-pressed={axis === a.id}
               onClick={() => {
-                setAxis(a)
+                setAxis(a.id)
                 setGroup(null)
               }}
             >
-              By {a}
+              {a.label}
             </button>
           ))}
         </div>
@@ -229,6 +242,43 @@ export function Rosters() {
 
       {names.length === 0 ? (
         <p className="rosters__none">Nothing matches &ldquo;{query.trim()}&rdquo;.</p>
+      ) : axis === 'all' ? (
+        <div className="picks">
+          <div className="picks__scroll">
+            <table className="picks__tbl">
+              <caption className="picks__cap">
+                {groups.length} nations &middot; {filtered.length} picks. A nation takes each race
+                once, so these eight are the whole squad.
+              </caption>
+              <tbody>
+                {groups.map(([nation, list]) => (
+                  <tr key={nation}>
+                    <th scope="row">{nation}</th>
+                    {list.map((s) => (
+                      <td key={s.race}>
+                        <button
+                          type="button"
+                          className={`pick-cell roster-tier--${s.tier.toLowerCase()}${s.vod ? '' : ' pick-cell--unseen'}`}
+                          disabled={!s.vod}
+                          onClick={() => {
+                            if (s.vod) {
+                              setShowShot(false)
+                              setOpen(s)
+                            }
+                          }}
+                        >
+                          <span className="pick-cell__race">{s.race}</span>
+                          <span className="pick-cell__coach">{s.coach}</span>
+                          <span className="pick-cell__ctv">{s.ctv.toLocaleString()}</span>
+                        </button>
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       ) : (
         <>
           <nav className="rosters__picker" aria-label={axis === 'nation' ? 'Nation' : 'Race'}>

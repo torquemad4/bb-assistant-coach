@@ -4026,3 +4026,80 @@ h1 {
   color: var(--pending);
   background: var(--pending-soft);
 }
+
+/* "All picks": every nation's eight choices at once. Wide by nature — eight
+   columns plus the nation — so it scrolls inside its own container rather than
+   making the page scroll sideways. */
+.picks { display: flex; flex-direction: column; gap: 10px; }
+
+.picks__scroll {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--bg-raised);
+}
+
+.picks__tbl { border-collapse: collapse; width: 100%; }
+
+.picks__cap {
+  caption-side: top;
+  text-align: left;
+  padding: 9px 12px;
+  font-size: 12.5px;
+  color: var(--ink-faint);
+  border-bottom: 1px solid var(--line);
+}
+
+.picks__tbl th[scope='row'] {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  text-align: left;
+  white-space: nowrap;
+  padding: 0 12px;
+  background: var(--bg-sunken);
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line-soft);
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 19px;
+  letter-spacing: 0.01em;
+}
+
+.picks__tbl td {
+  padding: 0;
+  border-bottom: 1px solid var(--line-soft);
+  border-right: 1px solid var(--line-soft);
+}
+
+.picks__tbl tr:last-child th[scope='row'],
+.picks__tbl tr:last-child td { border-bottom: 0; }
+
+.pick-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  width: 100%;
+  min-width: 124px;
+  min-height: 56px;
+  padding: 7px 9px 7px 11px;
+  border: 0;
+  border-left: 3px solid var(--tier, var(--line));
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pick-cell:hover:not(:disabled) { background: var(--bg-sunken); }
+.pick-cell:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; }
+.pick-cell--unseen { cursor: default; opacity: 0.45; }
+
+.pick-cell__race { font-size: 12.5px; font-weight: 600; line-height: 1.2; }
+.pick-cell__coach { font-size: 11.5px; color: var(--ink-dim); }
+.pick-cell__ctv {
+  font-size: 11px;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
