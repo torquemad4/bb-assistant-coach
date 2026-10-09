@@ -1,8 +1,9 @@
 # Blood Bowl Round Coordinator
 
 Tablet prototype for running a team Blood Bowl event from the coordinator's chair.
-Two tabs: a read-only **Dashboard** showing every live board in the round, and a
-**Match Control** tab holding every value a coordinator touches.
+A read-only **Dashboard** showing every live board in the round, a **Match Control**
+tab holding every value a coordinator touches, and alongside them **Pre-Match**,
+**Tables**, **Rosters**, **My Board**, **Settings** and **Admin**.
 
 Built for a landscape tablet (≈1024–1400px). Dark, high contrast, 44px touch targets.
 
@@ -95,7 +96,7 @@ To deploy without the custom domain — useful for a first smoke test — delete
 `routes` block and run `npm run deploy`; the app lands on
 `bb-round-coordinator.<your-subdomain>.workers.dev`.
 
-## The two tabs
+## Dashboard and Match Control
 
 **Dashboard** — one column per board, up to eight. Each column carries the England
 coach (flag, NAF name, race) above the score, the Italy coach below it, casualties
@@ -224,6 +225,51 @@ seeded. Tags appear on the dashboard cards once set.
 
 One ordering rule: a board already at **FT** keeps its result-derived outlook when
 tagged. Full time has settled it, and a tag must not undo that.
+
+## Rosters
+
+Every EuroBowl 2026 squad, browsable **by nation** or **by race**, with the roster
+still as it appeared on the reveal stream.
+
+Both axes are offered because they answer different questions. A nation is a squad
+you are drawn against; a race is a matchup you are about to play. Neither ordering
+subsumes the other, so the toggle switches the axis rather than filtering one by
+the other. A search box narrows on coach, nation or race across both.
+
+Opening a roster shows two panels stacked: the player list with the squad bar above
+it, and below that the Sideline Staff block — treasury, re-rolls, dedicated fans,
+apothecary — and Inducements. A VOD link jumps to the moment it was on screen.
+
+**This tab writes nothing and reads no API.** It is a static snapshot at
+`public/data/eb-rosters.json` with the stills under `public/rosters/`, so it cannot
+be made stale by a save, cannot fail with the database, and costs the round nothing.
+
+### Where the data comes from, and what is missing
+
+Transcribed from JaskierBB's four-hour reveal stream of 8 Oct 2026: squads read off
+each nation's tab bar, stills captured as frames. **It is not machine-regenerable** —
+the source is a VOD, not an API — so there is no `scripts/` entry to re-run. Correcting
+a figure means editing the JSON.
+
+Two gaps, both deliberate and both shown on the cards rather than hidden:
+
+- **31 of the 272 slots were never displayed.** The caster skipped them, mostly in the
+  big race blocks — High Elf 22 of 29, Dark Elf 18 of 27. Those cards are dashed and
+  cannot be opened; the coach, race, team value and NAF ranking are still there,
+  because those come from the squad bar rather than the roster page.
+- **167 of the 241 shown have players only.** The staff-and-inducements panel exists
+  only where the caster scrolled past the player list. The viewer says so rather than
+  leaving a reader wondering whether a squad really took no inducements.
+
+The squad figures are independently consistent: 34 nations, exactly eight coaches
+each, no nation picking the same race twice.
+
+### One image per nation
+
+Each nation's eight rosters are one JPEG, stacked, shown a tile at a time with
+`background-position`. Eight separate files per nation would be eight round trips on
+hall wifi; this is one, cached after the first coach in that squad is opened. The
+whole set is 30 MB, loaded a nation at a time and only when a roster is opened.
 
 ## Tournaments, rounds and boards
 
@@ -399,6 +445,9 @@ Half is the only field needing a call per board, so a full refresh of 8 boards i
 | `migrations/` | Schema and seed |
 | `scripts/fetch-tourplay.mjs` | Pulls squads and coaches from Tourplay |
 | `src/components/` | Dashboard, BoardCard, RoundOutlook, ControlPanel, Stepper |
+| `src/components/Rosters.tsx` | The Rosters tab — reads the snapshot, writes nothing |
+| `public/data/eb-rosters.json` | The EuroBowl squads and where each roster sits in the VOD |
+| `public/rosters/` | One stacked JPEG per nation, eight rosters each |
 
 Score, casualties and half are held separately from `outlook`, which is the seam
 for the Tourplay integration: a feed adapter writes the match state — ideally
