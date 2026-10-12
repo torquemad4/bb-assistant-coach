@@ -140,16 +140,20 @@ const SYNC_MIN_INTERVAL_MS = 8_000
 /**
  * The most boards one round may hold.
  *
- * Was 8, the size of a team fixture: England's eight against somebody else's.
- * An open event has as many boards as the draw has pairings, and Team England
- * Pathway Pairs reached ten in round 3 — at which point the old cap rejected
- * Match Control's save outright ("Bad board id: 9") and would have made a
- * Tourplay import silently drop the last two matches.
+ * It has been wrong twice, both times by being set to the biggest event seen
+ * so far. Eight was a team fixture — England's eight against somebody else's.
+ * Sixteen was Team England Pathway Pairs reaching ten. Then BBALL 2026 entered
+ * 62 coaches, drew 31 matches a round, and the import took the first sixteen
+ * and dropped the rest without a word: HexBaron had no board in rounds 2 and 3
+ * and could not report his own game, and from his phone that looked like being
+ * locked out of the app.
  *
- * Sixteen is headroom rather than a new meaning: the cap is only here to bound
- * a request body, not to describe an event.
+ * So the number is no longer an estimate of an event. It is a sanity bound on
+ * a request body and nothing else, set far above any Blood Bowl draw: 64
+ * boards is 128 coaches in one round. The dashboard is unaffected either way —
+ * at an open event it shows a card per coach of ours, not per board.
  */
-const MAX_BOARDS = 16
+const MAX_BOARDS = 64
 
 /**
  * Where a board's number is parked for the instant a swap takes to run.
@@ -1035,6 +1039,15 @@ async function followArmedTournaments(env: Env): Promise<void> {
     const needsImport = !held || liveRound > held.round_number || held.boards === 0
     if (needsImport && live.matches.length > 0) {
       const matches = [...live.matches].sort((a, b) => a.order - b.order).slice(0, MAX_BOARDS)
+      if (live.matches.length > matches.length) {
+        // Never silently. A dropped match is a coach with no board, who cannot
+        // report their own game and has no way to tell that from being locked
+        // out — which is exactly how this was found, weeks after the event.
+        console.error(
+          `watch: ${t.name} — round ${liveRound} has ${live.matches.length} matches, ` +
+            `importing only ${matches.length}. Boards beyond ${MAX_BOARDS} are MISSING.`,
+        )
+      }
       let roundId = held && held.round_number === liveRound ? held.id : undefined
       if (!roundId) {
         const created = await env.DB.prepare(
