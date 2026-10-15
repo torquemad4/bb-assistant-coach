@@ -58,4 +58,6 @@ INSERT INTO coach_identity (email, naf_number, display_name, is_admin) VALUES
   -- silently a read-only watcher with no board, which looks like a roster
   -- mistake rather than a spelling one.
   ('paulgegg@gmail.com',        70,    'Geggster', 0),
-  ('jacobtodd@gmail.com',       24508, 'punchymcragefists', 0);
+  ('jacobtodd@gmail.com',       24508, 'punchymcragefists', 0),
+  -- Eurobowl board 4. The last of the squad to get a login.
+  ('teamenglandteamchallenge@gmail.com', 7769, 'PeteW', 0);
