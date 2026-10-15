@@ -54,8 +54,16 @@ export const OUTLOOK_MAX: Outlook = 1
 /** Which of the two teams a side belongs to. */
 export type TeamId = 'A' | 'B'
 
-/** Nations currently fielded. Adding one means adding its flag to `Flag.tsx`. */
-export type CountryCode = 'england' | 'italy'
+/**
+ * Nations the app can draw a flag for. Adding one means adding its flag to
+ * `Flag.tsx` AND its name to `FLAGS` in the worker, or the import quietly
+ * stores no country.
+ *
+ * Kept as a union rather than a free string because `Flag` picks its drawing
+ * from it: an unknown code used to fall through to the last branch, so naming
+ * a nation the app did not know flew somebody else's flag over their boards.
+ */
+export type CountryCode = 'england' | 'italy' | 'finland'
 
 /** A team in this fixture. `country` is null when no flag applies. */
 export interface Team {

@@ -3,6 +3,7 @@ import type { CountryCode } from '../types'
 const LABEL: Record<CountryCode, string> = {
   england: 'England',
   italy: 'Italy',
+  finland: 'Finland',
 }
 
 /**
@@ -20,17 +21,28 @@ export function Flag({ country }: { country: CountryCode | null }) {
       aria-label={LABEL[country]}
       focusable="false"
     >
-      {country === 'england' ? (
+      {/* Switched on the code rather than an if/else chain: an unknown nation
+          used to fall through to whichever flag was last, which would have
+          flown Italy's colours over Finland at the Eurobowl. */}
+      {country === 'england' && (
         <>
           <rect width="15" height="10" fill="#f2f2f0" />
           <rect x="6" width="3" height="10" fill="#ce1124" />
           <rect y="3.5" width="15" height="3" fill="#ce1124" />
         </>
-      ) : (
+      )}
+      {country === 'italy' && (
         <>
           <rect width="5" height="10" fill="#008c45" />
           <rect x="5" width="5" height="10" fill="#f2f2f0" />
           <rect x="10" width="5" height="10" fill="#cd212a" />
+        </>
+      )}
+      {country === 'finland' && (
+        <>
+          <rect width="15" height="10" fill="#f2f2f0" />
+          <rect x="4.2" width="2.6" height="10" fill="#003580" />
+          <rect y="3.7" width="15" height="2.6" fill="#003580" />
         </>
       )}
     </svg>

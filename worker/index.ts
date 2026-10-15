@@ -658,7 +658,7 @@ async function adminState(db: D1Database) {
 }
 
 /** Nations the app has a flag for, keyed by lower-case name. */
-const FLAGS: Record<string, string> = { england: 'england', italy: 'italy' }
+const FLAGS: Record<string, string> = { england: 'england', italy: 'italy', finland: 'finland' }
 
 /**
  * A tournament named "England v Italy" is telling us its two sides, so use
