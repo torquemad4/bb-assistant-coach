@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { CASUALTY_LABEL, SQUAD_DEFAULT, SQUAD_SNOTLING } from '../casualties'
+import { loadDirectory, type DirectoryResult } from '../api'
 import { TourplayPanel } from './TourplayPanel'
 import type { RoundController } from '../state/useRound'
 import type { CasualtyMode } from '../types'
@@ -34,6 +35,10 @@ export function Settings(controller: RoundController) {
 
       <section className="set-group" aria-label="Follow the draw">
         <WatchRow controller={controller} offline={offline} />
+      </section>
+
+      <section className="set-group" aria-label="Coach directory">
+        <DirectoryRow offline={offline} />
       </section>
 
       <p className="set-foot">
@@ -330,6 +335,73 @@ function WatchRow({
           )}
         </div>
       </div>
+    </div>
+  )
+}
+
+/**
+ * Pulls everyone entered at this tournament into the coach directory.
+ *
+ * A draw arrives as a photograph, and turning the names on it into NAF numbers
+ * is what makes scouting work. Tourplay shows some coaches by handle and some
+ * by real name, and NAF only indexes handles, so matching them up by hand is
+ * slow — it cost most of an hour for four coaches the night before Eurobowl
+ * XVII. Tourplay's entry list has both halves, so this fetches it once.
+ *
+ * It runs on the server for a reason: Tourplay's bot protection refuses
+ * browsers and laptops now, but the Worker calls from Cloudflare's network.
+ * If that stops working too, the error here is how we will find out.
+ */
+function DirectoryRow({ offline }: { offline: boolean }) {
+  const [busy, setBusy] = useState(false)
+  const [result, setResult] = useState<DirectoryResult | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const run = async () => {
+    setBusy(true)
+    setError(null)
+    try {
+      setResult(await loadDirectory())
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause))
+      setResult(null)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="set-row">
+      <div className="set-row__text">
+        <span className="set-row__label">Pre-load the coach directory</span>
+        <span className="set-row__note">
+          {result ? (
+            <>
+              <strong>
+                {result.entered} entered, {result.withNafNumber} with a NAF number
+              </strong>{' '}
+              across {result.teams} teams.
+              {result.missing.length > 0 && (
+                <>
+                  {' '}
+                  No usable number for: {result.missing.join(', ')} — they will have no
+                  scouting, and no board of their own if they sign in.
+                </>
+              )}
+            </>
+          ) : error ? (
+            <span className="set-row__bad">{error}</span>
+          ) : (
+            <>
+              Fetches everyone entered at the linked tournament from Tourplay, with their
+              NAF numbers, so a name on a draw can be looked up instead of hunted down.
+            </>
+          )}
+        </span>
+      </div>
+      <button type="button" className="set-btn" disabled={offline || busy} onClick={run}>
+        {busy ? 'Fetching…' : result || error ? 'Fetch again' : 'Fetch'}
+      </button>
     </div>
   )
 }

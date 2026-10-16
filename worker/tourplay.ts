@@ -168,6 +168,57 @@ function side(roster: any): LiveSide {
  * Never throws: an import that cannot read the entry list still has a draw
  * worth importing, it just keeps Tourplay's names.
  */
+/** One entrant as Tourplay lists them, before any judgement about the number. */
+export interface DirectoryEntry {
+  playerId: string
+  displayName: string
+  nafNumber: number | null
+  nafVerified: boolean
+  team: string | null
+}
+
+/**
+ * Everybody entered, exactly as Tourplay has them.
+ *
+ * Unlike `fetchNafNumbers`, this keeps the people it cannot vouch for. A coach
+ * with no number, or an unverified one, is still worth recording: the useful
+ * fact at a tournament is often "this name resolves to nobody", and finding
+ * that out from a directory beats finding it out from a blank dashboard.
+ *
+ * Throws rather than failing soft, because the only caller is a deliberate
+ * "go and fetch this" and a silent empty result would read as "nobody entered".
+ */
+export async function fetchDirectory(slug: string): Promise<DirectoryEntry[]> {
+  const tournament = await getJson<any>(`api/tournament/${slug}`, slug)
+  const entries: DirectoryEntry[] = []
+  for (const category of tournament?.categories ?? []) {
+    const payload = await getJson<any>(
+      `api/inscriptions/${slug}/category/${category.id}/inscriptions`,
+      slug,
+    )
+    const inner = payload?.[String(category.id)] ?? {}
+    const groups = Array.isArray(inner) ? [inner] : Object.values(inner)
+    for (const rows of groups as any[][]) {
+      for (const row of rows ?? []) {
+        const player = row?.player
+        if (!player?.id) continue
+        const naf = player.nafNumber
+        const verified = player.nafVerified === true
+        entries.push({
+          playerId: String(player.id),
+          displayName: String(player.userNameToShow ?? '').trim() || 'Unknown',
+          // Only a verified number is kept as a number. An unverified one is
+          // self-asserted and has already renamed a coach to a stranger once.
+          nafNumber: verified && typeof naf === 'number' && naf > 0 ? naf : null,
+          nafVerified: verified,
+          team: row?.squad?.name ?? row?.roster?.teamName ?? null,
+        })
+      }
+    }
+  }
+  return entries
+}
+
 export async function fetchNafNumbers(slug: string): Promise<Map<string, number>> {
   const byPlayer = new Map<string, number>()
   try {

@@ -17,7 +17,7 @@
  * line-up.
  */
 
-import { fetchLiveRound, fetchNafNumbers, fetchTournament, type LiveMatch } from './tourplay'
+import { fetchDirectory, fetchLiveRound, fetchNafNumbers, fetchTournament, type LiveMatch } from './tourplay'
 import { pingEngine, pullScouting } from './scout'
 import { fetchMatchups, tableFromSnapshot, MATCHUP_MAX_AGE_MS, type MatchupPayload } from './matchups'
 import { identify } from './access'
@@ -890,6 +890,7 @@ async function openCoordinatorMode(db: D1Database, tournamentId: number | null):
  */
 const COORDINATOR_PATHS = new Set([
   '/api/activate',
+  '/api/directory',
   '/api/tournaments',
   '/api/tag',
   '/api/provisional',
@@ -1464,6 +1465,85 @@ export default {
     }
 
     // ---- POST /api/settings : how the hall reads its boards ----
+    // ---- POST /api/directory : pre-load everyone entered, from Tourplay ----
+    if (path === '/api/directory') {
+      if (request.method !== 'POST') return json({ error: `${request.method} not allowed` }, 405)
+
+      const active = await resolveActive(env.DB, view.id)
+      if (!active) return json({ error: 'No round is set up' }, 404)
+
+      let body: any = {}
+      try {
+        body = await request.json()
+      } catch {
+        /* an empty body means "use this tournament's own slug" */
+      }
+      const slug =
+        (typeof body?.slug === 'string' && body.slug.trim()) || active.tournament.tourplay_slug
+      if (!slug) {
+        return json({ error: 'No Tourplay slug on this tournament, and none given' }, 400)
+      }
+
+      // This call exists partly to answer a question nobody could answer from
+      // outside: whether Tourplay still talks to US. It refuses this container
+      // and the web entirely, but the Worker is on a different network. If that
+      // has stopped too, the error below is the news.
+      let entries
+      try {
+        entries = await fetchDirectory(slug)
+      } catch (cause) {
+        return json(
+          {
+            error: `Tourplay would not answer: ${cause instanceof Error ? cause.message : String(cause)}`,
+            slug,
+          },
+          502,
+        )
+      }
+
+      if (entries.length === 0) {
+        return json({ error: `Tourplay answered but listed nobody for "${slug}"`, slug }, 502)
+      }
+
+      // Upsert: re-running after late entries or a verification should update
+      // rather than duplicate, and must never lose somebody already recorded.
+      const statements = entries.map((e) =>
+        env.DB.prepare(
+          `INSERT INTO coach_directory
+             (player_id, display_name, naf_number, naf_verified, team, source, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+           ON CONFLICT(player_id) DO UPDATE SET
+             display_name = excluded.display_name,
+             naf_number   = excluded.naf_number,
+             naf_verified = excluded.naf_verified,
+             team         = excluded.team,
+             source       = excluded.source,
+             updated_at   = datetime('now')`,
+        ).bind(
+          e.playerId,
+          e.displayName,
+          e.nafNumber,
+          e.nafVerified ? 1 : 0,
+          e.team,
+          slug,
+        ),
+      )
+      await env.DB.batch(statements)
+
+      const withNumber = entries.filter((e) => e.nafNumber != null).length
+      const teams = [...new Set(entries.map((e) => e.team).filter(Boolean))]
+      return json({
+        slug,
+        entered: entries.length,
+        withNafNumber: withNumber,
+        withoutNafNumber: entries.length - withNumber,
+        teams: teams.length,
+        // Named so a coordinator can see at a glance whose number is missing
+        // before it costs them a board on the dashboard.
+        missing: entries.filter((e) => e.nafNumber == null).map((e) => e.displayName),
+      })
+    }
+
     if (path === '/api/settings') {
       if (request.method !== 'POST') return json({ error: `${request.method} not allowed` }, 405)
       let body: any

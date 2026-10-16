@@ -4103,3 +4103,8 @@ h1 {
   color: var(--ink-faint);
   font-variant-numeric: tabular-nums;
 }
+
+/* An error or a warning inside a settings row's explanatory note. */
+.set-row__bad {
+  color: var(--bad, #e5484d);
+}

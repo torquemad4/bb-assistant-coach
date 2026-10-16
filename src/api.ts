@@ -73,6 +73,26 @@ export function currentTeam(): string | null {
  * `null` disarms. Otherwise both halves go together: a start time with no last
  * round is a poll with nothing to stop it.
  */
+export interface DirectoryResult {
+  slug: string
+  entered: number
+  withNafNumber: number
+  withoutNafNumber: number
+  teams: number
+  missing: string[]
+}
+
+/**
+ * Pulls everybody entered at the linked tournament into the coach directory.
+ *
+ * Runs on the Worker, which reaches Tourplay from Cloudflare's network rather
+ * than a browser or a laptop — that is the whole point, since Tourplay's bot
+ * protection refuses most things now.
+ */
+export async function loadDirectory(): Promise<DirectoryResult> {
+  return post('/api/directory', {})
+}
+
 export async function setWatch(
   watch: { from: string; untilRound: number } | null,
 ): Promise<Round> {
