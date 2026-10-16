@@ -68,6 +68,19 @@ This is dashboard-managed, not in this repo. Moving it here — an allowlist fil
 a CI step that reconciles the Access app — needs the deploy token extended with
 **Access: Apps and Policies → Edit**.
 
+#### A login with no NAF number is not a gap
+
+`coach_identity.naf_number` is how a viewer is matched to the boards they sit on,
+so a coach without one sees whatever is live and nothing of their own. But not
+everyone with a login is playing. mefspores runs events rather than entering
+them, and her row is deliberately `naf_number = NULL`: there is no board of hers
+to find, and the column is the only place that could say so.
+
+Do not fill a NULL here to tidy it up, and never write a number that has not been
+confirmed by the person it belongs to. NAF numbers are small integers and the
+scout resolves them without complaint — an invented `1` becomes coach #1 and the
+dashboard reports a stranger's record as ours.
+
 Deploys are unaffected: CI authenticates with the API token, not a browser session.
 
 ### From your own machine
