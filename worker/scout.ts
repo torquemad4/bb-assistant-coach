@@ -21,14 +21,18 @@ import { matchupKey, type MatchupTable } from './matchups'
 /**
  * Where the engine lives when the environment does not say otherwise.
  *
- * The full App Service hostname, regional suffix and all. `DEPLOY_AZURE.md` in
- * bb-county-tool talks about `bb-county-app.azurewebsites.net`, but that name
- * does not resolve — taking it from there cost a round of "HTTP 530, error 1016"
- * (Cloudflare for "origin DNS failure"), which reads like a dead service rather
- * than a wrong address. The deployed URL is the one in `DEPLOY_UI.md`.
+ * It is a Cloudflare Worker in front of a container now — see `DEPLOY.md` in
+ * bb-county-tool. It used to be an Azure App Service, and when that was torn
+ * down this app kept calling the old hostname: the name stopped resolving, so
+ * every scouting pull came back "HTTP 530, error 1016", which is Cloudflare for
+ * "I cannot resolve the origin" and reads exactly like a dead service rather
+ * than a wrong address. It was found the night before Eurobowl XVII, with the
+ * draw in and every coach expecting opponent records.
+ *
+ * The engine sleeps after 30 minutes idle and takes about 20 seconds to wake,
+ * so the first pull of a session is slow and that is normal, not a failure.
  */
-export const DEFAULT_BASE =
-  'https://bb-county-app-euebajf9c8bnfqb0.ukwest-01.azurewebsites.net'
+export const DEFAULT_BASE = 'https://naf-api.torquemada.uk'
 
 /** The engine's address, however it was configured. One place, one spelling. */
 export function engineBase(base?: string): string {

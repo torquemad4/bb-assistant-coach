@@ -19,12 +19,16 @@
  * zero: at a tournament, "no data" and "played none, won none" must not look
  * alike.
  *
- * THE ENGINE: a FastAPI service over the official NAF database dump, hosted at
- * bb-county-app-euebajf9c8bnfqb0.ukwest-01.azurewebsites.net and shared with the
- * England BB site. (The short `bb-county-app.azurewebsites.net` in that repo's
- * DEPLOY_AZURE.md does not resolve.)
- * Source in `torquemad4/bb-county-tool`; its own docs at `{base}/docs`. It also
- * powers the county tool, so it is not this app's to break.
+ * THE ENGINE: a FastAPI service over the official NAF database dump, at
+ * https://naf-api.torquemada.uk — a Cloudflare Worker in front of a container.
+ * It moved there from Azure, and because this app's address was not moved with
+ * it, scouting silently died: the old hostname stopped resolving and every pull
+ * returned "HTTP 530, error 1016". Source and deploy notes in
+ * `torquemad4/bb-county-tool`; its own docs at `{base}/docs`. It also powers
+ * the county tool and the England BB site, so it is not this app's to break.
+ *
+ * It sleeps after 30 minutes idle and wakes in about 20 seconds, so the first
+ * scout of a session is slow by design.
  *
  * Two figures it has no endpoint for yet, both left empty rather than faked:
  *   `form`     no last-N-games endpoint, though the engine holds the per-game
