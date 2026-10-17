@@ -17,6 +17,7 @@
  * line-up.
  */
 
+import { parseDraw } from './draw'
 import { fetchDirectory, fetchLiveRound, fetchNafNumbers, fetchTournament, type LiveMatch } from './tourplay'
 import { pingEngine, pullScouting } from './scout'
 import { fetchMatchups, tableFromSnapshot, MATCHUP_MAX_AGE_MS, type MatchupPayload } from './matchups'
@@ -658,7 +659,12 @@ async function adminState(db: D1Database) {
 }
 
 /** Nations the app has a flag for, keyed by lower-case name. */
-const FLAGS: Record<string, string> = { england: 'england', italy: 'italy', finland: 'finland' }
+const FLAGS: Record<string, string> = {
+  england: 'england',
+  italy: 'italy',
+  finland: 'finland',
+  austria: 'austria',
+}
 
 /**
  * A tournament named "England v Italy" is telling us its two sides, so use
@@ -901,6 +907,7 @@ const COORDINATOR_PATHS = new Set([
   '/api/link',
   '/api/board-order',
   '/api/settings',
+  '/api/draw',
 ])
 
 /**
@@ -1134,10 +1141,13 @@ export default {
     const writing = request.method !== 'GET' && request.method !== 'HEAD'
     if (writing && (COORDINATOR_PATHS.has(path) || path === '/api/round')) {
       // Open mode lends the coordinator's powers to everyone signed in — but
-      // never over these two endpoints, which are where the lending is switched
-      // off and where roles are set. A flag that could protect itself would be
-      // a one-way door.
-      const guarded = path === '/api/settings' || path === '/api/admin'
+      // never over these endpoints. Two of them are where the lending is
+      // switched off and where roles are set: a flag that could protect itself
+      // would be a one-way door. The third, entering a draw, replaces every
+      // board in a round and any scores already on them — the one action here a
+      // coach could take by accident and not be able to undo.
+      const guarded =
+        path === '/api/settings' || path === '/api/admin' || path === '/api/draw'
       const lent = guarded ? false : await openCoordinatorMode(env.DB, view.id)
       if (!viewer.isAdmin && !lent) return notAllowed(viewer)
     }
@@ -1462,6 +1472,123 @@ export default {
         .bind(body.provisional ? 1 : 0, active.tournament.id)
         .run()
       return json(await readState(env.DB, view))
+    }
+
+    // ---- POST /api/draw : enter a round from a pasted draw ----
+    // Without `confirm` this resolves and returns what it WOULD write, because
+    // a draw entered wrong is worse than one entered late: the scout runs on
+    // the numbers, and a wrong number is a real stranger's record shown as an
+    // opponent's. The coordinator reads the preview, then confirms.
+    if (path === '/api/draw') {
+      if (request.method !== 'POST') return json({ error: `${request.method} not allowed` }, 405)
+
+      let body: any
+      try {
+        body = await request.json()
+      } catch {
+        return json({ error: 'Body is not valid JSON' }, 400)
+      }
+
+      const text = typeof body?.text === 'string' ? body.text : ''
+      if (!text.trim()) return json({ error: 'No draw was pasted' }, 400)
+
+      const active = await resolveActive(env.DB, view.id)
+      if (!active) return json({ error: 'No tournament is set up' }, 404)
+
+      const roundNumber = Number(body?.roundNumber)
+      if (!Number.isInteger(roundNumber) || roundNumber < 1) {
+        return json({ error: 'Which round this is must be a whole number from 1' }, 400)
+      }
+
+      const { boards, skipped } = await parseDraw(env.DB, text)
+      if (boards.length === 0) {
+        return json({ error: 'No fixture lines found. Each board is "A vs B".', skipped }, 400)
+      }
+      if (boards.length > MAX_BOARDS) {
+        return json({ error: `That is ${boards.length} boards; the limit is ${MAX_BOARDS}` }, 400)
+      }
+
+      const existing = await env.DB
+        .prepare('SELECT id FROM round WHERE tournament_id = ? AND round_number = ?')
+        .bind(active.tournament.id, roundNumber)
+        .first<{ id: number }>()
+
+      if (!body?.confirm) {
+        return json({
+          preview: true,
+          roundNumber,
+          boards,
+          skipped,
+          unresolved: boards.filter((b) => b.a.nafNumber == null || b.b.nafNumber == null).length,
+          // Said plainly, because "round 2" already existing and being replaced
+          // is exactly the mistake worth catching before it happens.
+          effect: existing
+            ? `Round ${roundNumber} already exists — its ${boards.length} boards would be replaced, losing any scores on them.`
+            : `Round ${roundNumber} would be created with ${boards.length} boards.`,
+        })
+      }
+
+      let roundId = existing?.id
+      if (!roundId) {
+        const created = await env.DB
+          .prepare('INSERT INTO round (tournament_id, round_number) VALUES (?, ?) RETURNING id')
+          .bind(active.tournament.id, roundNumber)
+          .first<{ id: number }>()
+        roundId = created!.id
+      }
+
+      // One batch: a half-written draw on a coordinator's screen mid-event is
+      // the failure this app has already had once, at Sheffield.
+      const statements: D1PreparedStatement[] = [
+        env.DB.prepare('DELETE FROM board WHERE round_id = ?').bind(roundId),
+      ]
+      for (const b of boards) {
+        statements.push(
+          env.DB.prepare(
+            `INSERT INTO board (round_id, board_no, a_naf_name, a_naf_number, a_race,
+                                b_naf_name, b_naf_number, b_race, period, outlook)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, '1', 0)`,
+          ).bind(
+            roundId,
+            b.boardNo,
+            b.a.nafName,
+            b.a.nafNumber,
+            b.a.race,
+            b.b.nafName,
+            b.b.nafNumber,
+            b.b.race,
+          ),
+        )
+      }
+      statements.push(
+        env.DB.prepare("UPDATE round SET updated_at = datetime('now') WHERE id = ?").bind(roundId),
+      )
+      await env.DB.batch(statements)
+      await setActive(env.DB, active.tournament.id, roundId!)
+
+      // Everything a human just confirmed is better evidence than anything the
+      // resolver inferred, so it goes back into the directory under the `board:`
+      // key the seeding uses — the next draw with this name needs no thought.
+      const learned = boards
+        .flatMap((b) => [b.a, b.b])
+        .filter((s) => s.nafNumber != null && s.nafName)
+      if (learned.length > 0) {
+        await env.DB.batch(
+          learned.map((s) =>
+            env.DB.prepare(
+              `INSERT INTO coach_directory
+                 (player_id, display_name, naf_number, naf_verified, team, source, updated_at)
+               VALUES (?, ?, ?, 1, ?, 'draw-entry', datetime('now'))
+               ON CONFLICT(player_id) DO UPDATE SET
+                 display_name = excluded.display_name, naf_number = excluded.naf_number,
+                 naf_verified = 1, team = excluded.team,
+                 source = excluded.source, updated_at = datetime('now')`,
+            ).bind('board:' + s.nafName.toLowerCase(), s.nafName, s.nafNumber, s.race),
+          ),
+        )
+      }
+
+      return json({ ...(await readState(env.DB, view)), entered: boards.length, roundNumber })
     }
 
     // ---- POST /api/settings : how the hall reads its boards ----

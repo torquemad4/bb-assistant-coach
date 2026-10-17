@@ -4,6 +4,7 @@ const LABEL: Record<CountryCode, string> = {
   england: 'England',
   italy: 'Italy',
   finland: 'Finland',
+  austria: 'Austria',
 }
 
 /**
@@ -43,6 +44,12 @@ export function Flag({ country }: { country: CountryCode | null }) {
           <rect width="15" height="10" fill="#f2f2f0" />
           <rect x="4.2" width="2.6" height="10" fill="#003580" />
           <rect y="3.7" width="15" height="2.6" fill="#003580" />
+        </>
+      )}
+      {country === 'austria' && (
+        <>
+          <rect width="15" height="10" fill="#ed2939" />
+          <rect y="3.33" width="15" height="3.34" fill="#f2f2f0" />
         </>
       )}
     </svg>

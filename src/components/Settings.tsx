@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react'
 import { CASUALTY_LABEL, SQUAD_DEFAULT, SQUAD_SNOTLING } from '../casualties'
-import { loadDirectory, type DirectoryResult } from '../api'
+import {
+  enterDraw,
+  loadDirectory,
+  type DirectoryResult,
+  type DrawPreview,
+  type DrawSide,
+} from '../api'
 import { TourplayPanel } from './TourplayPanel'
 import type { RoundController } from '../state/useRound'
 import type { CasualtyMode } from '../types'
@@ -39,6 +45,10 @@ export function Settings(controller: RoundController) {
 
       <section className="set-group" aria-label="Coach directory">
         <DirectoryRow offline={offline} />
+      </section>
+
+      <section className="set-group" aria-label="Enter a draw">
+        <DrawRow controller={controller} offline={offline} />
       </section>
 
       <p className="set-foot">
@@ -352,6 +362,193 @@ function WatchRow({
  * browsers and laptops now, but the Worker calls from Cloudflare's network.
  * If that stops working too, the error here is how we will find out.
  */
+/**
+ * Entering a round from a photographed draw.
+ *
+ * This exists because every draw at Eurobowl XVII arrived as a photograph of
+ * Tourplay on a phone — their bot protection refuses us from every route we
+ * have — and until now the only way to get one into the app was somebody
+ * writing SQL by hand. That makes the round go up when a person is awake and at
+ * a keyboard, rather than when the draw is on the wall.
+ *
+ * The names are the hard part, so the coach directory fills the NAF numbers.
+ * Nothing is written until the preview has been read: scouting runs on those
+ * numbers, and a wrong one does not fail, it quietly shows a stranger's record
+ * as the opponent's.
+ */
+function DrawRow({ controller, offline }: RowProps) {
+  const [text, setText] = useState('')
+  // Defaults to the one after what is on screen, which is what a draw going up
+  // almost always is. It stays editable: a round entered wrong, or a late
+  // correction to one already played, both need to name their own number.
+  const [roundNumber, setRoundNumber] = useState(String(controller.round.roundNumber + 1))
+  const [preview, setPreview] = useState<DrawPreview | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const run = async (confirm: boolean) => {
+    setBusy(true)
+    setError(null)
+    try {
+      const result = await enterDraw(text, Number(roundNumber), confirm)
+      if ('preview' in result) {
+        setPreview(result)
+      } else {
+        controller.adoptRound(result)
+        setPreview(null)
+        setText('')
+      }
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause))
+      setPreview(null)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  // Editing the paste invalidates the preview: confirming a preview that no
+  // longer matches what is on screen is the one way this could write something
+  // nobody read.
+  const edit = (next: string) => {
+    setText(next)
+    setPreview(null)
+  }
+
+  return (
+    <div className="set-row set-row--stack">
+      <div className="set-row__text">
+        <span className="set-row__label">Enter a draw</span>
+        <span className="set-row__note">
+          One board per line, in board order — <code>Geggster vs Tok_Janne</code>. A race
+          in brackets after a name is used as given; otherwise the directory supplies the
+          one that coach registered. NAF numbers are filled from the directory and shown
+          below before anything is written.
+        </span>
+      </div>
+
+      <textarea
+        className="draw-paste"
+        rows={8}
+        value={text}
+        spellCheck={false}
+        placeholder={'Geggster vs Tok_Janne\nPeteW (Black Orc) vs Umberto (Chaos Chosen)'}
+        onChange={(e) => edit(e.target.value)}
+        disabled={offline || busy}
+        aria-label="The draw, one board per line"
+      />
+
+      <div className="draw-actions">
+        <label className="draw-round">
+          Round
+          <input
+            type="number"
+            min={1}
+            value={roundNumber}
+            onChange={(e) => {
+              setRoundNumber(e.target.value)
+              setPreview(null)
+            }}
+            disabled={offline || busy}
+          />
+        </label>
+        <button
+          type="button"
+          className="set-row__button"
+          onClick={() => void run(false)}
+          disabled={offline || busy || !text.trim()}
+        >
+          {busy && !preview ? 'Checking…' : 'Check the draw'}
+        </button>
+      </div>
+
+      {error && <p className="set-row__note set-row__bad">{error}</p>}
+
+      {preview && (
+        <div className="draw-preview">
+          <p className="set-row__note">
+            <strong>{preview.effect}</strong>
+            {preview.unresolved > 0 && (
+              <>
+                {' '}
+                <span className="set-row__bad">
+                  {preview.unresolved} of {preview.boards.length} boards have a coach with
+                  no NAF number — those get no scouting, and no board of their own if they
+                  sign in.
+                </span>
+              </>
+            )}
+          </p>
+
+          <table className="draw-table">
+            <thead>
+              <tr>
+                <th scope="col">#</th>
+                <th scope="col">Home</th>
+                <th scope="col">Away</th>
+              </tr>
+            </thead>
+            <tbody>
+              {preview.boards.map((b) => (
+                <tr key={b.boardNo}>
+                  <td>{b.boardNo}</td>
+                  <td>
+                    <DrawCell side={b.a} />
+                  </td>
+                  <td>
+                    <DrawCell side={b.b} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {preview.skipped.length > 0 && (
+            <p className="set-row__note">
+              Not read as fixtures, and left out: {preview.skipped.join(' / ')}
+            </p>
+          )}
+
+          <button
+            type="button"
+            className="set-row__button"
+            onClick={() => void run(true)}
+            disabled={offline || busy}
+          >
+            {busy ? 'Entering…' : `Enter round ${preview.roundNumber}`}
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * One coach in the preview, with where their number came from.
+ *
+ * An inferred number reads differently from a confirmed one on purpose. The
+ * guessing that this replaces was wrong twice in this project's history, and
+ * both times it looked exactly as confident as a correct answer.
+ */
+function DrawCell({ side }: { side: DrawSide }) {
+  return (
+    <span className="draw-cell">
+      <span className="draw-cell__name">{side.nafName || side.typed}</span>
+      {side.nafNumber == null ? (
+        <span className="draw-cell__flag set-row__bad">no NAF number</span>
+      ) : (
+        <span className={side.verified ? 'draw-cell__naf' : 'draw-cell__naf set-row__bad'}>
+          #{side.nafNumber}
+          {!side.verified && ' — guessed from a partial name, check it'}
+        </span>
+      )}
+      <span className="draw-cell__race">
+        {side.race || 'no race'}
+        {side.raceAssumed && ' (as registered)'}
+      </span>
+    </span>
+  )
+}
+
 function DirectoryRow({ offline }: { offline: boolean }) {
   const [busy, setBusy] = useState(false)
   const [result, setResult] = useState<DirectoryResult | null>(null)

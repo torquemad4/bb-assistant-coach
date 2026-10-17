@@ -93,6 +93,44 @@ export async function loadDirectory(): Promise<DirectoryResult> {
   return post('/api/directory', {})
 }
 
+/** One coach as the paste gave them, and as the directory resolved them. */
+export interface DrawSide {
+  typed: string
+  nafName: string
+  nafNumber: number | null
+  race: string
+  how: 'exact' | 'prefix' | 'unknown'
+  verified: boolean
+  raceAssumed: boolean
+}
+
+export interface DrawPreview {
+  preview: true
+  roundNumber: number
+  boards: { boardNo: number; a: DrawSide; b: DrawSide }[]
+  skipped: string[]
+  unresolved: number
+  /** Plain English for what confirming would do — it may replace a round. */
+  effect: string
+}
+
+/**
+ * Turns a pasted draw into a round.
+ *
+ * Without `confirm` this returns what it would write rather than writing it.
+ * A draw entered wrong is worse than one entered late: scouting runs on the
+ * NAF numbers, so a wrong one quietly shows a stranger's record as the
+ * opponent's. The preview is where that gets caught.
+ */
+export async function enterDraw(
+  text: string,
+  roundNumber: number,
+  confirm = false,
+): Promise<DrawPreview | Round> {
+  const payload = await post('/api/draw', { text, roundNumber, confirm })
+  return payload.preview ? (payload as DrawPreview) : normalise(payload)
+}
+
 export async function setWatch(
   watch: { from: string; untilRound: number } | null,
 ): Promise<Round> {

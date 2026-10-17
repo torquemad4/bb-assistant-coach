@@ -302,8 +302,47 @@ later resolver pass cannot overwrite a number a human confirmed. That covers exa
 the cases the handle matcher structurally cannot — the real names, and captions with
 asides like "KFoged (Kaare)".
 
-**Nothing reads `coach_directory` yet.** It is populated and correct, and the consumer
-— filling a NAF number as a name is typed into Match Control — is not built.
+### Entering a draw by hand
+
+Settings → **Enter a draw** takes the fixtures as text, one board per line, and builds
+the round from them. It exists because Tourplay's bot protection now refuses us from
+every route we have — this container, the open web, and the Worker — so every draw at
+Eurobowl XVII arrived as a photograph of somebody's phone. Before this, the only way in
+was writing SQL, which means the round goes up when a person is awake at a keyboard
+rather than when the draw is on the wall.
+
+`Geggster vs Tok_Janne` is enough. A race in brackets is used as given; without one the
+directory supplies whatever that coach registered, and the preview marks it "as
+registered". Leading table numbers (`Table 10-1`), `v`/`vs`/`versus` and dashes are all
+accepted, because those are what people copy off a screen; lines that are not fixtures
+are listed back rather than silently dropped. **Board numbers come from line order, not
+from the sheet** — Tourplay numbers tables per hall, so "Table 10-1" through "10-8"
+would otherwise give eight boards all called ten.
+
+Nothing is written until the preview has been read, and the preview says in words
+whether it would create a round or replace one that already has scores on it. A number
+found by exact name is shown plainly; one inferred from a partial name is flagged and
+has to be checked, because scouting on a wrong number does not fail — it shows a real
+stranger's record as the opponent's. A prefix matching two coaches is not a match at
+all.
+
+This is the one coordinator action that open mode never lends out, unlike entering
+scores: it replaces every board in a round, including any scores already on them, and
+it is the only thing here a coach could do by accident and not be able to undo.
+
+Confirming also writes what was entered back into the directory as verified, under the
+same `board:` key the board seeding uses. A name resolved once by hand never has to be
+resolved again.
+
+#### Aliases: what the sheet prints vs what we call them
+
+`coach_directory.alias` is the second way into a row. NAF indexes handles; a draw sheet
+prints whatever the coach registered, which is often their real name. England's board 2
+is `PeteW` to us and "Peter Woodroffe" on the sheet; Finland's board 3 is `Brutopatia`
+to NAF and "Petrus Artimo" on the sheet. A lookup matches handle or alias, and the board
+is labelled with the handle the team knows. Where the same coach is held more than once,
+the spelling a human typed wins over the one scraped from NAF — otherwise the hall reads
+`greenskinphil` and `torquemada` in NAF's lower case.
 
 The squad figures are independently consistent: 34 nations, exactly eight coaches
 each, no nation picking the same race twice.

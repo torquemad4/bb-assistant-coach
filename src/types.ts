@@ -63,7 +63,7 @@ export type TeamId = 'A' | 'B'
  * from it: an unknown code used to fall through to the last branch, so naming
  * a nation the app did not know flew somebody else's flag over their boards.
  */
-export type CountryCode = 'england' | 'italy' | 'finland'
+export type CountryCode = 'england' | 'italy' | 'finland' | 'austria'
 
 /** A team in this fixture. `country` is null when no flag applies. */
 export interface Team {
