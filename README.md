@@ -274,6 +274,37 @@ Two gaps, both deliberate and both shown on the cards rather than hidden:
   only where the caster scrolled past the player list. The viewer says so rather than
   leaving a reader wondering whether a squad really took no inducements.
 
+### NAF numbers for the field: 159 of 272, and why not more
+
+`public/data/eb-naf-numbers.json` holds every attendee whose NAF number could be
+established, resolved by taking the name the reveal showed and looking for it as a
+handle in NAF's rankings **filtered to that coach's own nation and race** — three
+things agreeing, which is the same evidence NAF's own autocomplete gives. 157 are
+exact handle matches; 2 are prefix inferences and carry `verified: false`, because a
+guessed number resolves silently to a stranger and puts their record on our dashboard.
+
+The 113 that did not resolve mostly cannot. NAF indexes handles, and a third of the
+field was captioned by real name ("Peter Woodroffe", "Niko Lönnberg"); there is
+nothing to match against, and elimination guesswork was tried and got it wrong twice.
+A handful more are small nations with nobody at all ranked in that race, so the pool
+is legitimately empty rather than unfetched.
+
+Three nation names had to be translated, and this is the trap worth knowing: the
+reveal captions nations its own way and NAF names them differently — **Polska →
+Poland, Northern Ireland → North Ireland, USA → United States of America**. A wrong
+nation returns an empty page with HTTP 200, which looks exactly like "this coach has
+no NAF handle" and silently cost 24 coaches. The rankings page's own dropdown is the
+authority; check against it before concluding a name is unresolvable.
+
+Separately, the Worker seeds this table from the boards themselves: any name/number
+pair somebody has entered on a draw is recorded as verified, under a `board:` key so a
+later resolver pass cannot overwrite a number a human confirmed. That covers exactly
+the cases the handle matcher structurally cannot — the real names, and captions with
+asides like "KFoged (Kaare)".
+
+**Nothing reads `coach_directory` yet.** It is populated and correct, and the consumer
+— filling a NAF number as a name is typed into Match Control — is not built.
+
 The squad figures are independently consistent: 34 nations, exactly eight coaches
 each, no nation picking the same race twice.
 

@@ -1,0 +1,1848 @@
+{
+ "capturedAt": "2026-10-17",
+ "source": "member.thenaf.net rankings, filtered to each coach nation and race",
+ "note": "Resolved from public/data/eb-rosters.json. A coach is matched only when the string the squad reveal showed stands as a NAF handle inside that coach own nation AND race. Real-name entrants cannot be matched this way: NAF indexes handles only. verified is true for an exact handle match, false for a prefix inference, which must be confirmed before a scout runs on it.",
+ "resolved": 159,
+ "ofAttendees": 272,
+ "coaches": [
+  {
+   "nation": "Australia",
+   "shown": "ClayInfinity",
+   "handle": "ClayInfinity",
+   "naf": 8442,
+   "race": "Nurgle",
+   "verified": true
+  },
+  {
+   "nation": "Australia",
+   "shown": "Heliakoan",
+   "handle": "Heliakoan84",
+   "naf": 33104,
+   "race": "Lizardmen",
+   "verified": false
+  },
+  {
+   "nation": "Australia",
+   "shown": "Magneto_AUS",
+   "handle": "Magneto_AUS",
+   "naf": 32990,
+   "race": "Dark Elf",
+   "verified": true
+  },
+  {
+   "nation": "Australia",
+   "shown": "Meowcats",
+   "handle": "Meowcats",
+   "naf": 24217,
+   "race": "Human",
+   "verified": true
+  },
+  {
+   "nation": "Austria",
+   "shown": "bagrar",
+   "handle": "bagrar",
+   "naf": 27503,
+   "race": "Elven Union",
+   "verified": true
+  },
+  {
+   "nation": "Austria",
+   "shown": "Huanchi",
+   "handle": "huanchi",
+   "naf": 26758,
+   "race": "Dark Elf",
+   "verified": true
+  },
+  {
+   "nation": "Austria",
+   "shown": "Lewdgrip",
+   "handle": "lewdgrip",
+   "naf": 21163,
+   "race": "Orc",
+   "verified": true
+  },
+  {
+   "nation": "Austria",
+   "shown": "outcaarst",
+   "handle": "outcaarst",
+   "naf": 15546,
+   "race": "High Elf",
+   "verified": true
+  },
+  {
+   "nation": "Austria",
+   "shown": "Smaug",
+   "handle": "smaug",
+   "naf": 17419,
+   "race": "Imperial Nobility",
+   "verified": true
+  },
+  {
+   "nation": "Austria",
+   "shown": "Xurpils",
+   "handle": "xurpils",
+   "naf": 36502,
+   "race": "Wood Elf",
+   "verified": true
+  },
+  {
+   "nation": "Belgium",
+   "shown": "Da_Great_MC",
+   "handle": "Da_Great_MC",
+   "naf": 8168,
+   "race": "Bretonnian",
+   "verified": true
+  },
+  {
+   "nation": "Belgium",
+   "shown": "Dragonwhelp",
+   "handle": "dragonwhelp",
+   "naf": 15298,
+   "race": "Nurgle",
+   "verified": true
+  },
+  {
+   "nation": "Belgium",
+   "shown": "Dragou",
+   "handle": "Dragou",
+   "naf": 32757,
+   "race": "Orc",
+   "verified": true
+  },
+  {
+   "nation": "Belgium",
+   "shown": "Driesfield",
+   "handle": "Driesfield",
+   "naf": 6183,
+   "race": "Chaos Chosen",
+   "verified": true
+  },
+  {
+   "nation": "Belgium",
+   "shown": "JC_Phoenix",
+   "handle": "JC_Phoenix",
+   "naf": 27015,
+   "race": "Lizardmen",
+   "verified": true
+  },
+  {
+   "nation": "Belgium",
+   "shown": "Montelleke",
+   "handle": "montelleke",
+   "naf": 35493,
+   "race": "Necromantic Horror",
+   "verified": true
+  },
+  {
+   "nation": "Belgium",
+   "shown": "Tempesty",
+   "handle": "Tempesty",
+   "naf": 39444,
+   "race": "High Elf",
+   "verified": true
+  },
+  {
+   "nation": "Brazil",
+   "shown": "Janis Traveler",
+   "handle": "JanisTraveler",
+   "naf": 39019,
+   "race": "Lizardmen",
+   "verified": true
+  },
+  {
+   "nation": "Brazil",
+   "shown": "TuxPenguin",
+   "handle": "TuxPenguin",
+   "naf": 43134,
+   "race": "Orc",
+   "verified": true
+  },
+  {
+   "nation": "Bulgaria",
+   "shown": "rorarimbo",
+   "handle": "rorarimbo",
+   "naf": 24592,
+   "race": "Gnome",
+   "verified": true
+  },
+  {
+   "nation": "Canada",
+   "shown": "Da Scum",
+   "handle": "Da_Scum",
+   "naf": 113,
+   "race": "Chaos Chosen",
+   "verified": true
+  },
+  {
+   "nation": "Canada",
+   "shown": "mrlight",
+   "handle": "mrlight",
+   "naf": 34582,
+   "race": "Tomb Kings",
+   "verified": true
+  },
+  {
+   "nation": "Canada",
+   "shown": "seanh1986",
+   "handle": "seanh1986",
+   "naf": 23461,
+   "race": "Human",
+   "verified": true
+  },
+  {
+   "nation": "Canada",
+   "shown": "Sols",
+   "handle": "sols",
+   "naf": 30733,
+   "race": "Amazon",
+   "verified": true
+  },
+  {
+   "nation": "Canada",
+   "shown": "Valgas",
+   "handle": "Valgas",
+   "naf": 23846,
+   "race": "Nurgle",
+   "verified": true
+  },
+  {
+   "nation": "Czech Republic",
+   "shown": "Ernedar",
+   "handle": "ernedar",
+   "naf": 25398,
+   "race": "Dwarf",
+   "verified": true
+  },
+  {
+   "nation": "Czech Republic",
+   "shown": "Helmet",
+   "handle": "helmet",
+   "naf": 23427,
+   "race": "Old World Alliance",
+   "verified": true
+  },
+  {
+   "nation": "Czech Republic",
+   "shown": "HLiNiC",
+   "handle": "HLiNiC",
+   "naf": 35650,
+   "race": "High Elf",
+   "verified": true
+  },
+  {
+   "nation": "Czech Republic",
+   "shown": "Tlampy",
+   "handle": "Tlampy",
+   "naf": 34613,
+   "race": "Imperial Nobility",
+   "verified": true
+  },
+  {
+   "nation": "Czech Republic",
+   "shown": "Waschik",
+   "handle": "Waschik",
+   "naf": 31728,
+   "race": "Dark Elf",
+   "verified": true
+  },
+  {
+   "nation": "Czech Republic",
+   "shown": "Wolfhound",
+   "handle": "Wolfhound",
+   "naf": 23827,
+   "race": "Lizardmen",
+   "verified": true
+  },
+  {
+   "nation": "Denmark",
+   "shown": "AntonLunau",
+   "handle": "AntonLunau",
+   "naf": 17846,
+   "race": "Human",
+   "verified": true
+  },
+  {
+   "nation": "Denmark",
+   "shown": "cbraw",
+   "handle": "cbraw",
+   "naf": 29046,
+   "race": "Elven Union",
+   "verified": true
+  },
+  {
+   "nation": "Denmark",
+   "shown": "MadVig",
+   "handle": "MadVig",
+   "naf": 24222,
+   "race": "Skaven",
+   "verified": true
+  },
+  {
+   "nation": "Denmark",
+   "shown": "MrNiebling",
+   "handle": "MrNiebling",
+   "naf": 11499,
+   "race": "Chaos Dwarf",
+   "verified": true
+  },
+  {
+   "nation": "Denmark",
+   "shown": "Tripleskull",
+   "handle": "Tripleskull",
+   "naf": 9524,
+   "race": "Dark Elf",
+   "verified": true
+  },
+  {
+   "nation": "Denmark",
+   "shown": "Wolter",
+   "handle": "Wolter",
+   "naf": 29078,
+   "race": "Shambling Undead",
+   "verified": true
+  },
+  {
+   "nation": "England",
+   "shown": "Bashto",
+   "handle": "Bashto",
+   "naf": 32021,
+   "race": "High Elf",
+   "verified": true
+  },
+  {
+   "nation": "England",
+   "shown": "Geggster",
+   "handle": "Geggster",
+   "naf": 70,
+   "race": "Necromantic Horror",
+   "verified": true
+  },
+  {
+   "nation": "England",
+   "shown": "GreenskinPhil",
+   "handle": "greenskinphil",
+   "naf": 31674,
+   "race": "Slann",
+   "verified": true
+  },
+  {
+   "nation": "England",
+   "shown": "Pipey",
+   "handle": "Pipey",
+   "naf": 5290,
+   "race": "Lizardmen",
+   "verified": true
+  },
+  {
+   "nation": "England",
+   "shown": "thulean",
+   "handle": "thulean",
+   "naf": 28239,
+   "race": "Human",
+   "verified": true
+  },
+  {
+   "nation": "England",
+   "shown": "Torquemada",
+   "handle": "torquemada",
+   "naf": 31866,
+   "race": "Elven Union",
+   "verified": true
+  },
+  {
+   "nation": "Finland",
+   "shown": "Aleksi Meuronen",
+   "handle": "AleksiMeuronen",
+   "naf": 22800,
+   "race": "Elven Union",
+   "verified": true
+  },
+  {
+   "nation": "Finland",
+   "shown": "EvilSmoothie",
+   "handle": "EvilSmoothie",
+   "naf": 28783,
+   "race": "Dwarf",
+   "verified": true
+  },
+  {
+   "nation": "Finland",
+   "shown": "JuicyBee",
+   "handle": "JuicyBee",
+   "naf": 22788,
+   "race": "Tomb Kings",
+   "verified": true
+  },
+  {
+   "nation": "Finland",
+   "shown": "Paisti",
+   "handle": "Paisti",
+   "naf": 29673,
+   "race": "Necromantic Horror",
+   "verified": true
+  },
+  {
+   "nation": "Finland",
+   "shown": "prodigal_son",
+   "handle": "prodigal_son",
+   "naf": 27369,
+   "race": "Shambling Undead",
+   "verified": true
+  },
+  {
+   "nation": "France",
+   "shown": "Budmilka",
+   "handle": "Budmilka",
+   "naf": 20320,
+   "race": "Orc",
+   "verified": true
+  },
+  {
+   "nation": "France",
+   "shown": "Helborg",
+   "handle": "Helborg",
+   "naf": 22470,
+   "race": "High Elf",
+   "verified": true
+  },
+  {
+   "nation": "France",
+   "shown": "LaMurge",
+   "handle": "LaMurge",
+   "naf": 30941,
+   "race": "Old World Alliance",
+   "verified": true
+  },
+  {
+   "nation": "France",
+   "shown": "maitre_tactac",
+   "handle": "Maitre_tactac",
+   "naf": 372,
+   "race": "Snotling",
+   "verified": true
+  },
+  {
+   "nation": "France",
+   "shown": "Monitor",
+   "handle": "monitor",
+   "naf": 33726,
+   "race": "Elven Union",
+   "verified": true
+  },
+  {
+   "nation": "France",
+   "shown": "Nabolo",
+   "handle": "Nabolo",
+   "naf": 28417,
+   "race": "Bretonnian",
+   "verified": true
+  },
+  {
+   "nation": "France",
+   "shown": "Raztout",
+   "handle": "Raztout",
+   "naf": 16824,
+   "race": "Lizardmen",
+   "verified": true
+  },
+  {
+   "nation": "France",
+   "shown": "ThoT",
+   "handle": "Thot",
+   "naf": 19526,
+   "race": "Amazon",
+   "verified": true
+  },
+  {
+   "nation": "Germany",
+   "shown": "arioso",
+   "handle": "arioso",
+   "naf": 18378,
+   "race": "Skaven",
+   "verified": true
+  },
+  {
+   "nation": "Germany",
+   "shown": "Baki",
+   "handle": "Baki",
+   "naf": 19064,
+   "race": "Orc",
+   "verified": true
+  },
+  {
+   "nation": "Germany",
+   "shown": "Candlejack",
+   "handle": "Candlejack",
+   "naf": 5844,
+   "race": "Necromantic Horror",
+   "verified": true
+  },
+  {
+   "nation": "Germany",
+   "shown": "Junior84",
+   "handle": "Junior84",
+   "naf": 20857,
+   "race": "Imperial Nobility",
+   "verified": true
+  },
+  {
+   "nation": "Germany",
+   "shown": "Narok",
+   "handle": "Narok",
+   "naf": 13715,
+   "race": "Dark Elf",
+   "verified": true
+  },
+  {
+   "nation": "Germany",
+   "shown": "Skwii",
+   "handle": "Skwii",
+   "naf": 30644,
+   "race": "High Elf",
+   "verified": true
+  },
+  {
+   "nation": "Germany",
+   "shown": "Stimme",
+   "handle": "Stimme",
+   "naf": 17245,
+   "race": "Nurgle",
+   "verified": true
+  },
+  {
+   "nation": "Germany",
+   "shown": "Tschirgant",
+   "handle": "Tschirgant",
+   "naf": 32633,
+   "race": "Elven Union",
+   "verified": true
+  },
+  {
+   "nation": "Greece",
+   "shown": "Cazual",
+   "handle": "Cazual",
+   "naf": 29555,
+   "race": "Human",
+   "verified": true
+  },
+  {
+   "nation": "Greece",
+   "shown": "cdassak",
+   "handle": "cdassak",
+   "naf": 26050,
+   "race": "Orc",
+   "verified": true
+  },
+  {
+   "nation": "Greece",
+   "shown": "CurbStomp",
+   "handle": "CurbStomp",
+   "naf": 28079,
+   "race": "Necromantic Horror",
+   "verified": true
+  },
+  {
+   "nation": "Greece",
+   "shown": "Eiravel",
+   "handle": "Eiravel",
+   "naf": 29560,
+   "race": "Nurgle",
+   "verified": true
+  },
+  {
+   "nation": "Greece",
+   "shown": "GPBoom",
+   "handle": "GPBoom",
+   "naf": 33835,
+   "race": "Dark Elf",
+   "verified": true
+  },
+  {
+   "nation": "Greece",
+   "shown": "iamdimarkos",
+   "handle": "iamdimarkos",
+   "naf": 32523,
+   "race": "High Elf",
+   "verified": true
+  },
+  {
+   "nation": "Greece",
+   "shown": "Vabap",
+   "handle": "Vabap",
+   "naf": 28431,
+   "race": "Imperial Nobility",
+   "verified": true
+  },
+  {
+   "nation": "Hungary",
+   "shown": "Alidor",
+   "handle": "Alidor",
+   "naf": 23980,
+   "race": "Human",
+   "verified": true
+  },
+  {
+   "nation": "Hungary",
+   "shown": "Itzla",
+   "handle": "Itzla",
+   "naf": 9758,
+   "race": "Lizardmen",
+   "verified": true
+  },
+  {
+   "nation": "Hungary",
+   "shown": "nottobe",
+   "handle": "nottobe",
+   "naf": 20167,
+   "race": "Shambling Undead",
+   "verified": true
+  },
+  {
+   "nation": "Hungary",
+   "shown": "ofGlory",
+   "handle": "ofglory",
+   "naf": 38691,
+   "race": "Amazon",
+   "verified": true
+  },
+  {
+   "nation": "Hungary",
+   "shown": "schwd",
+   "handle": "schwd",
+   "naf": 27064,
+   "race": "High Elf",
+   "verified": true
+  },
+  {
+   "nation": "Hungary",
+   "shown": "TimeBandit",
+   "handle": "timebandit",
+   "naf": 19892,
+   "race": "Bretonnian",
+   "verified": true
+  },
+  {
+   "nation": "Hungary",
+   "shown": "Zaki",
+   "handle": "Zaki",
+   "naf": 32605,
+   "race": "Chaos Chosen",
+   "verified": true
+  },
+  {
+   "nation": "Ireland",
+   "shown": "CaolanG",
+   "handle": "caolang",
+   "naf": 29656,
+   "race": "High Elf",
+   "verified": true
+  },
+  {
+   "nation": "Ireland",
+   "shown": "danton",
+   "handle": "Danton",
+   "naf": 22046,
+   "race": "Lizardmen",
+   "verified": true
+  },
+  {
+   "nation": "Ireland",
+   "shown": "Fiki",
+   "handle": "fiki",
+   "naf": 22693,
+   "race": "Orc",
+   "verified": true
+  },
+  {
+   "nation": "Ireland",
+   "shown": "Holybinch",
+   "handle": "holybinch",
+   "naf": 38939,
+   "race": "Nurgle",
+   "verified": true
+  },
+  {
+   "nation": "Ireland",
+   "shown": "smootherkarma",
+   "handle": "smootherkarma",
+   "naf": 32576,
+   "race": "Dark Elf",
+   "verified": true
+  },
+  {
+   "nation": "Ireland",
+   "shown": "willwalsh",
+   "handle": "willwalsh",
+   "naf": 31645,
+   "race": "Old World Alliance",
+   "verified": true
+  },
+  {
+   "nation": "Italy",
+   "shown": "BadStorm",
+   "handle": "BadStorm",
+   "naf": 23028,
+   "race": "Wood Elf",
+   "verified": true
+  },
+  {
+   "nation": "Italy",
+   "shown": "Barbossa",
+   "handle": "Barbossa",
+   "naf": 19236,
+   "race": "Dark Elf",
+   "verified": true
+  },
+  {
+   "nation": "Italy",
+   "shown": "Menzogna",
+   "handle": "Menzogna",
+   "naf": 16475,
+   "race": "Necromantic Horror",
+   "verified": true
+  },
+  {
+   "nation": "Italy",
+   "shown": "PanicoBlack",
+   "handle": "PanicoBlack",
+   "naf": 21763,
+   "race": "Tomb Kings",
+   "verified": true
+  },
+  {
+   "nation": "Italy",
+   "shown": "Serafino",
+   "handle": "Serafino",
+   "naf": 24193,
+   "race": "High Elf",
+   "verified": true
+  },
+  {
+   "nation": "Italy",
+   "shown": "Yena",
+   "handle": "Yena",
+   "naf": 5798,
+   "race": "Elven Union",
+   "verified": true
+  },
+  {
+   "nation": "Lithuania",
+   "shown": "Lukoshius",
+   "handle": "Lukoshius",
+   "naf": 29285,
+   "race": "Wood Elf",
+   "verified": true
+  },
+  {
+   "nation": "Lithuania",
+   "shown": "Mankiz",
+   "handle": "Mankiz",
+   "naf": 29281,
+   "race": "High Elf",
+   "verified": true
+  },
+  {
+   "nation": "Luxembourg",
+   "shown": "BriçouB2",
+   "handle": "BriçouB2",
+   "naf": 39576,
+   "race": "Skaven",
+   "verified": true
+  },
+  {
+   "nation": "Luxembourg",
+   "shown": "Dr_SLM",
+   "handle": "Dr_SLM",
+   "naf": 25373,
+   "race": "Amazon",
+   "verified": true
+  },
+  {
+   "nation": "Luxembourg",
+   "shown": "GeorgesLeYeti",
+   "handle": "GeorgesLeYeti",
+   "naf": 32449,
+   "race": "Bretonnian",
+   "verified": true
+  },
+  {
+   "nation": "Luxembourg",
+   "shown": "Hiero",
+   "handle": "hiero",
+   "naf": 36711,
+   "race": "Dark Elf",
+   "verified": true
+  },
+  {
+   "nation": "Luxembourg",
+   "shown": "Kiri",
+   "handle": "kiri",
+   "naf": 36617,
+   "race": "Orc",
+   "verified": true
+  },
+  {
+   "nation": "Malta",
+   "shown": "davestarmaster",
+   "handle": "davestarmaster",
+   "naf": 28768,
+   "race": "Necromantic Horror",
+   "verified": true
+  },
+  {
+   "nation": "Malta",
+   "shown": "MetalMalta",
+   "handle": "metalmalta",
+   "naf": 24033,
+   "race": "Elven Union",
+   "verified": true
+  },
+  {
+   "nation": "Malta",
+   "shown": "Nightsword",
+   "handle": "NightSword",
+   "naf": 27095,
+   "race": "Lizardmen",
+   "verified": true
+  },
+  {
+   "nation": "Malta",
+   "shown": "realmalteser",
+   "handle": "RealMalteser",
+   "naf": 21409,
+   "race": "Nurgle",
+   "verified": true
+  },
+  {
+   "nation": "Netherlands",
+   "shown": "Henning",
+   "handle": "Henning",
+   "naf": 33351,
+   "race": "Dark Elf",
+   "verified": true
+  },
+  {
+   "nation": "Netherlands",
+   "shown": "JaM",
+   "handle": "JaM",
+   "naf": 6121,
+   "race": "Orc",
+   "verified": true
+  },
+  {
+   "nation": "Netherlands",
+   "shown": "Saki",
+   "handle": "Saki",
+   "naf": 24134,
+   "race": "Nurgle",
+   "verified": true
+  },
+  {
+   "nation": "Netherlands",
+   "shown": "SirSebstar",
+   "handle": "SirSebstar",
+   "naf": 5271,
+   "race": "Old World Alliance",
+   "verified": true
+  },
+  {
+   "nation": "Northern Ireland",
+   "shown": "fake_moustache",
+   "handle": "Fake_Moustache",
+   "naf": 39840,
+   "race": "Imperial Nobility",
+   "verified": true
+  },
+  {
+   "nation": "Northern Ireland",
+   "shown": "Onyersix",
+   "handle": "onyersix",
+   "naf": 28385,
+   "race": "Elven Union",
+   "verified": true
+  },
+  {
+   "nation": "Northern Ireland",
+   "shown": "Seduceroftrolls",
+   "handle": "SeducerOfTrolls",
+   "naf": 30786,
+   "race": "Human",
+   "verified": true
+  },
+  {
+   "nation": "Norway",
+   "shown": "POJ-POJ",
+   "handle": "poj-poj",
+   "naf": 24857,
+   "race": "Wood Elf",
+   "verified": true
+  },
+  {
+   "nation": "Polska",
+   "shown": "Grzechu",
+   "handle": "Grzechu",
+   "naf": 30403,
+   "race": "Wood Elf",
+   "verified": true
+  },
+  {
+   "nation": "Polska",
+   "shown": "Misiozaurus",
+   "handle": "Misiozaurus",
+   "naf": 27003,
+   "race": "Dwarf",
+   "verified": true
+  },
+  {
+   "nation": "Polska",
+   "shown": "Renon",
+   "handle": "Renon",
+   "naf": 29236,
+   "race": "Black Orc",
+   "verified": true
+  },
+  {
+   "nation": "Polska",
+   "shown": "Reszka",
+   "handle": "Reszka",
+   "naf": 21573,
+   "race": "Orc",
+   "verified": true
+  },
+  {
+   "nation": "Polska",
+   "shown": "Rupert",
+   "handle": "Rupert",
+   "naf": 32817,
+   "race": "Chaos Chosen",
+   "verified": true
+  },
+  {
+   "nation": "Polska",
+   "shown": "Unicornson",
+   "handle": "unicornson",
+   "naf": 27257,
+   "race": "Lizardmen",
+   "verified": true
+  },
+  {
+   "nation": "Portugal",
+   "shown": "Beltroniko",
+   "handle": "Beltroniko",
+   "naf": 36563,
+   "race": "Elven Union",
+   "verified": true
+  },
+  {
+   "nation": "Portugal",
+   "shown": "PedroR",
+   "handle": "PedroR",
+   "naf": 31447,
+   "race": "High Elf",
+   "verified": true
+  },
+  {
+   "nation": "Portugal",
+   "shown": "Regor",
+   "handle": "Regor",
+   "naf": 40935,
+   "race": "Dark Elf",
+   "verified": true
+  },
+  {
+   "nation": "Portugal",
+   "shown": "Rodvil",
+   "handle": "rodvil",
+   "naf": 24496,
+   "race": "Nurgle",
+   "verified": true
+  },
+  {
+   "nation": "Romania",
+   "shown": "eFTy",
+   "handle": "efty",
+   "naf": 31865,
+   "race": "High Elf",
+   "verified": true
+  },
+  {
+   "nation": "Scotland",
+   "shown": "Blitzy",
+   "handle": "blitzy",
+   "naf": 38963,
+   "race": "Dark Elf",
+   "verified": true
+  },
+  {
+   "nation": "Scotland",
+   "shown": "camelchops",
+   "handle": "camelchops",
+   "naf": 32575,
+   "race": "Necromantic Horror",
+   "verified": true
+  },
+  {
+   "nation": "Scotland",
+   "shown": "DazzaMac",
+   "handle": "DazzaMac",
+   "naf": 30935,
+   "race": "Orc",
+   "verified": true
+  },
+  {
+   "nation": "Scotland",
+   "shown": "Mournival",
+   "handle": "Mournival",
+   "naf": 23496,
+   "race": "Wood Elf",
+   "verified": true
+  },
+  {
+   "nation": "Scotland",
+   "shown": "TalonBay",
+   "handle": "TalonBay",
+   "naf": 6858,
+   "race": "Shambling Undead",
+   "verified": true
+  },
+  {
+   "nation": "Slovenia",
+   "shown": "RokSok",
+   "handle": "RokSok",
+   "naf": 42181,
+   "race": "Imperial Nobility",
+   "verified": true
+  },
+  {
+   "nation": "Slovenia",
+   "shown": "Shizo.1st",
+   "handle": "shizo.1st",
+   "naf": 26782,
+   "race": "Orc",
+   "verified": true
+  },
+  {
+   "nation": "Spain",
+   "shown": "Duke_Luthor",
+   "handle": "Duke_Luthor",
+   "naf": 11793,
+   "race": "Tomb Kings",
+   "verified": true
+  },
+  {
+   "nation": "Spain",
+   "shown": "Kewan",
+   "handle": "Kewan",
+   "naf": 7710,
+   "race": "Shambling Undead",
+   "verified": true
+  },
+  {
+   "nation": "Spain",
+   "shown": "Mudarra93",
+   "handle": "mudarra93",
+   "naf": 25531,
+   "race": "High Elf",
+   "verified": true
+  },
+  {
+   "nation": "Spain",
+   "shown": "Sir Mayans",
+   "handle": "SirMayans",
+   "naf": 3294,
+   "race": "Chaos Renegade",
+   "verified": true
+  },
+  {
+   "nation": "Spain",
+   "shown": "Varagh",
+   "handle": "varagh",
+   "naf": 8630,
+   "race": "Elven Union",
+   "verified": true
+  },
+  {
+   "nation": "Spain",
+   "shown": "vikingkop",
+   "handle": "vikingkop",
+   "naf": 27915,
+   "race": "Dark Elf",
+   "verified": true
+  },
+  {
+   "nation": "Sweden",
+   "shown": "coma",
+   "handle": "Coma",
+   "naf": 13697,
+   "race": "High Elf",
+   "verified": true
+  },
+  {
+   "nation": "Sweden",
+   "shown": "inforthepain",
+   "handle": "inforthepain",
+   "naf": 19483,
+   "race": "Chaos Chosen",
+   "verified": true
+  },
+  {
+   "nation": "Sweden",
+   "shown": "Ionas",
+   "handle": "Ionas",
+   "naf": 28196,
+   "race": "Necromantic Horror",
+   "verified": true
+  },
+  {
+   "nation": "Sweden",
+   "shown": "kaju",
+   "handle": "kaju",
+   "naf": 19529,
+   "race": "Amazon",
+   "verified": true
+  },
+  {
+   "nation": "Sweden",
+   "shown": "melisqus",
+   "handle": "melisqus",
+   "naf": 16238,
+   "race": "Shambling Undead",
+   "verified": true
+  },
+  {
+   "nation": "Sweden",
+   "shown": "Sirvejlance",
+   "handle": "sirvejlance",
+   "naf": 32550,
+   "race": "Elven Union",
+   "verified": true
+  },
+  {
+   "nation": "Sweden",
+   "shown": "Skuld",
+   "handle": "Skuld",
+   "naf": 20481,
+   "race": "Dark Elf",
+   "verified": true
+  },
+  {
+   "nation": "Switzerland",
+   "shown": "Benito",
+   "handle": "benito",
+   "naf": 32368,
+   "race": "Vampire",
+   "verified": true
+  },
+  {
+   "nation": "Switzerland",
+   "shown": "Jokaero",
+   "handle": "Jokaero",
+   "naf": 2785,
+   "race": "Orc",
+   "verified": true
+  },
+  {
+   "nation": "Switzerland",
+   "shown": "Kosmo",
+   "handle": "Kosmo",
+   "naf": 39313,
+   "race": "Tomb Kings",
+   "verified": true
+  },
+  {
+   "nation": "Switzerland",
+   "shown": "Otis",
+   "handle": "otis",
+   "naf": 16782,
+   "race": "Norse",
+   "verified": true
+  },
+  {
+   "nation": "Switzerland",
+   "shown": "Siggi",
+   "handle": "siggi",
+   "naf": 25971,
+   "race": "Necromantic Horror",
+   "verified": true
+  },
+  {
+   "nation": "Switzerland",
+   "shown": "Xi",
+   "handle": "Xi",
+   "naf": 32650,
+   "race": "Nurgle",
+   "verified": true
+  },
+  {
+   "nation": "USA",
+   "shown": "Delevus",
+   "handle": "delevus",
+   "naf": 9884,
+   "race": "Bretonnian",
+   "verified": true
+  },
+  {
+   "nation": "USA",
+   "shown": "Hdubbs",
+   "handle": "HDubbs",
+   "naf": 22433,
+   "race": "Dark Elf",
+   "verified": true
+  },
+  {
+   "nation": "Ukraine",
+   "shown": "bonich",
+   "handle": "bonich",
+   "naf": 37265,
+   "race": "Human",
+   "verified": true
+  },
+  {
+   "nation": "Ukraine",
+   "shown": "Dangard",
+   "handle": "Dangard",
+   "naf": 41852,
+   "race": "Bretonnian",
+   "verified": true
+  },
+  {
+   "nation": "Ukraine",
+   "shown": "GraysonStark",
+   "handle": "graysonstark",
+   "naf": 33608,
+   "race": "Dark Elf",
+   "verified": true
+  },
+  {
+   "nation": "Ukraine",
+   "shown": "OlafWonderbea…",
+   "handle": "OlafWonderbeard",
+   "naf": 41744,
+   "race": "Nurgle",
+   "verified": false
+  },
+  {
+   "nation": "Ukraine",
+   "shown": "YangZubr",
+   "handle": "yangzubr",
+   "naf": 38993,
+   "race": "Orc",
+   "verified": true
+  },
+  {
+   "nation": "Wales",
+   "shown": "AndyDavo",
+   "handle": "AndyDavo",
+   "naf": 19726,
+   "race": "Dark Elf",
+   "verified": true
+  },
+  {
+   "nation": "Wales",
+   "shown": "Chuck-Dredd",
+   "handle": "chuck-dredd",
+   "naf": 37287,
+   "race": "Nurgle",
+   "verified": true
+  },
+  {
+   "nation": "Wales",
+   "shown": "dementor",
+   "handle": "dementor",
+   "naf": 21143,
+   "race": "Amazon",
+   "verified": true
+  },
+  {
+   "nation": "Wales",
+   "shown": "GColeman76",
+   "handle": "GColeman76",
+   "naf": 1009,
+   "race": "High Elf",
+   "verified": true
+  },
+  {
+   "nation": "Wales",
+   "shown": "Joeseph",
+   "handle": "joeseph",
+   "naf": 38195,
+   "race": "Necromantic Horror",
+   "verified": true
+  },
+  {
+   "nation": "Wales",
+   "shown": "Loynster",
+   "handle": "Loynster",
+   "naf": 24104,
+   "race": "Human",
+   "verified": true
+  }
+ ],
+ "unresolved": [
+  {
+   "nation": "Australia",
+   "shown": "Andrew Laidla…",
+   "race": "Chaos Chosen"
+  },
+  {
+   "nation": "Australia",
+   "shown": "ChrisD",
+   "race": "High Elf"
+  },
+  {
+   "nation": "Australia",
+   "shown": "Dimitri Klimenko",
+   "race": "Elven Union"
+  },
+  {
+   "nation": "Australia",
+   "shown": "Shane Wilkins",
+   "race": "Necromantic Horror"
+  },
+  {
+   "nation": "Austria",
+   "shown": "Tok_Janne",
+   "race": "Skaven"
+  },
+  {
+   "nation": "Austria",
+   "shown": "Umberto",
+   "race": "Chaos Chosen"
+  },
+  {
+   "nation": "Belgium",
+   "shown": "willi",
+   "race": "Dark Elf"
+  },
+  {
+   "nation": "Brazil",
+   "shown": "Daniel Silva",
+   "race": "High Elf"
+  },
+  {
+   "nation": "Brazil",
+   "shown": "DelvySP",
+   "race": "Nurgle"
+  },
+  {
+   "nation": "Brazil",
+   "shown": "Edwardlover",
+   "race": "Shambling Undead"
+  },
+  {
+   "nation": "Brazil",
+   "shown": "Gustavo Pereira",
+   "race": "Wood Elf"
+  },
+  {
+   "nation": "Brazil",
+   "shown": "Paulo Kaedo",
+   "race": "Dark Elf"
+  },
+  {
+   "nation": "Brazil",
+   "shown": "Vítor Pereira",
+   "race": "Human"
+  },
+  {
+   "nation": "Bulgaria",
+   "shown": "Andreas Kaftan",
+   "race": "Underworld Denizens"
+  },
+  {
+   "nation": "Bulgaria",
+   "shown": "Emil Tzanev",
+   "race": "Black Orc"
+  },
+  {
+   "nation": "Bulgaria",
+   "shown": "Martin Pearson",
+   "race": "Goblin"
+  },
+  {
+   "nation": "Bulgaria",
+   "shown": "Nikolay Arabad…",
+   "race": "Ogre"
+  },
+  {
+   "nation": "Bulgaria",
+   "shown": "Ubik Spray Can",
+   "race": "Halfling"
+  },
+  {
+   "nation": "Bulgaria",
+   "shown": "Vasil Baltadzhiev",
+   "race": "Snotling"
+  },
+  {
+   "nation": "Bulgaria",
+   "shown": "Огнян Дойчин…",
+   "race": "Lizardmen"
+  },
+  {
+   "nation": "Canada",
+   "shown": "Ivan Blauhorn",
+   "race": "High Elf"
+  },
+  {
+   "nation": "Canada",
+   "shown": "Murray Campbell",
+   "race": "Necromantic Horror"
+  },
+  {
+   "nation": "Canada",
+   "shown": "Stephen Jarrett",
+   "race": "Dark Elf"
+  },
+  {
+   "nation": "Czech Republic",
+   "shown": "Kubusta",
+   "race": "Bretonnian"
+  },
+  {
+   "nation": "Czech Republic",
+   "shown": "Tomáš Viktorín",
+   "race": "Elven Union"
+  },
+  {
+   "nation": "Denmark",
+   "shown": "Brian Holst Lar…",
+   "race": "Old World Alliance"
+  },
+  {
+   "nation": "Denmark",
+   "shown": "Theis Høvring",
+   "race": "Necromantic Horror"
+  },
+  {
+   "nation": "England",
+   "shown": "KFoged (Kaare)",
+   "race": "Dark Elf"
+  },
+  {
+   "nation": "England",
+   "shown": "Peter Woodroffe",
+   "race": "Black Orc"
+  },
+  {
+   "nation": "Finland",
+   "shown": "Aku Sonninen",
+   "race": "Nurgle"
+  },
+  {
+   "nation": "Finland",
+   "shown": "Niko Lönnberg",
+   "race": "Skaven"
+  },
+  {
+   "nation": "Finland",
+   "shown": "Petrus Artimo",
+   "race": "Dark Elf"
+  },
+  {
+   "nation": "Greece",
+   "shown": "Xtapodias",
+   "race": "Elven Union"
+  },
+  {
+   "nation": "Hungary",
+   "shown": "Suggon Deeznu…",
+   "race": "Vampire"
+  },
+  {
+   "nation": "Ireland",
+   "shown": "Crowdog09",
+   "race": "Elven Union"
+  },
+  {
+   "nation": "Ireland",
+   "shown": "Matt Boswell",
+   "race": "Amazon"
+  },
+  {
+   "nation": "Italy",
+   "shown": "Matteo Diegoli",
+   "race": "Orc"
+  },
+  {
+   "nation": "Italy",
+   "shown": "Silvio Phoenix…",
+   "race": "Nurgle"
+  },
+  {
+   "nation": "Latvia",
+   "shown": "Agris",
+   "race": "Norse"
+  },
+  {
+   "nation": "Latvia",
+   "shown": "Artūrs Kriviņš",
+   "race": "Ogre"
+  },
+  {
+   "nation": "Latvia",
+   "shown": "Egotheist",
+   "race": "Nurgle"
+  },
+  {
+   "nation": "Latvia",
+   "shown": "Elkunino",
+   "race": "Tomb Kings"
+  },
+  {
+   "nation": "Latvia",
+   "shown": "Gundars",
+   "race": "High Elf"
+  },
+  {
+   "nation": "Latvia",
+   "shown": "irralevance",
+   "race": "Lizardmen"
+  },
+  {
+   "nation": "Latvia",
+   "shown": "Juris Jančevskis",
+   "race": "Skaven"
+  },
+  {
+   "nation": "Latvia",
+   "shown": "RoyalDevilzzz",
+   "race": "Necromantic Horror"
+  },
+  {
+   "nation": "Lithuania",
+   "shown": "Algirdas “Fuel”…",
+   "race": "Tomb Kings"
+  },
+  {
+   "nation": "Lithuania",
+   "shown": "Dolce",
+   "race": "Norse"
+  },
+  {
+   "nation": "Lithuania",
+   "shown": "Kestutis Samso…",
+   "race": "Human"
+  },
+  {
+   "nation": "Lithuania",
+   "shown": "Mindaugas Rin…",
+   "race": "Amazon"
+  },
+  {
+   "nation": "Lithuania",
+   "shown": "Storbertas",
+   "race": "Dark Elf"
+  },
+  {
+   "nation": "Lithuania",
+   "shown": "Tlinas",
+   "race": "Elven Union"
+  },
+  {
+   "nation": "Luxembourg",
+   "shown": "Christophe Ken…",
+   "race": "Tomb Kings"
+  },
+  {
+   "nation": "Luxembourg",
+   "shown": "Rui Azevedo",
+   "race": "High Elf"
+  },
+  {
+   "nation": "Luxembourg",
+   "shown": "Silsei",
+   "race": "Shambling Undead"
+  },
+  {
+   "nation": "Malta",
+   "shown": "Andrew Ciarlo",
+   "race": "Amazon"
+  },
+  {
+   "nation": "Malta",
+   "shown": "Jean Mark Meli",
+   "race": "Shambling Undead"
+  },
+  {
+   "nation": "Malta",
+   "shown": "Matthew Abela",
+   "race": "Slann"
+  },
+  {
+   "nation": "Malta",
+   "shown": "Ryan Grech",
+   "race": "Dark Elf"
+  },
+  {
+   "nation": "Netherlands",
+   "shown": "David van Dijk",
+   "race": "Skaven"
+  },
+  {
+   "nation": "Netherlands",
+   "shown": "Edwin van der…",
+   "race": "Wood Elf"
+  },
+  {
+   "nation": "Netherlands",
+   "shown": "Michel Schaake",
+   "race": "Elven Union"
+  },
+  {
+   "nation": "Netherlands",
+   "shown": "Yuri",
+   "race": "High Elf"
+  },
+  {
+   "nation": "Northern Ireland",
+   "shown": "Brett Jones",
+   "race": "High Elf"
+  },
+  {
+   "nation": "Northern Ireland",
+   "shown": "Gary McDowell",
+   "race": "Necromantic Horror"
+  },
+  {
+   "nation": "Northern Ireland",
+   "shown": "Owen",
+   "race": "Orc"
+  },
+  {
+   "nation": "Northern Ireland",
+   "shown": "Ronnie Mckee",
+   "race": "Bretonnian"
+  },
+  {
+   "nation": "Northern Ireland",
+   "shown": "Sizmond (Simon)",
+   "race": "Dark Elf"
+  },
+  {
+   "nation": "Norway",
+   "shown": "Craig B",
+   "race": "Orc"
+  },
+  {
+   "nation": "Norway",
+   "shown": "Michael Klump",
+   "race": "High Elf"
+  },
+  {
+   "nation": "Norway",
+   "shown": "Moppa",
+   "race": "Old World Alliance"
+  },
+  {
+   "nation": "Norway",
+   "shown": "Sindre MB",
+   "race": "Dark Elf"
+  },
+  {
+   "nation": "Norway",
+   "shown": "Stephen Smith",
+   "race": "Necromantic Horror"
+  },
+  {
+   "nation": "Norway",
+   "shown": "Torstein",
+   "race": "Human"
+  },
+  {
+   "nation": "Norway",
+   "shown": "Øyvind Straume",
+   "race": "Elven Union"
+  },
+  {
+   "nation": "Polska",
+   "shown": "BoR44k",
+   "race": "Nurgle"
+  },
+  {
+   "nation": "Polska",
+   "shown": "Leon",
+   "race": "Human"
+  },
+  {
+   "nation": "Portugal",
+   "shown": "Gabriel Batista",
+   "race": "Necromantic Horror"
+  },
+  {
+   "nation": "Portugal",
+   "shown": "Marcos Carvalho",
+   "race": "Human"
+  },
+  {
+   "nation": "Portugal",
+   "shown": "Mendes",
+   "race": "Bretonnian"
+  },
+  {
+   "nation": "Portugal",
+   "shown": "Pedro Gomes",
+   "race": "Lizardmen"
+  },
+  {
+   "nation": "Romania",
+   "shown": "Gabriel Stelescu",
+   "race": "Underworld Denizens"
+  },
+  {
+   "nation": "Romania",
+   "shown": "Magos",
+   "race": "Human"
+  },
+  {
+   "nation": "Romania",
+   "shown": "Sebastian",
+   "race": "Elven Union"
+  },
+  {
+   "nation": "Romania",
+   "shown": "SGJack",
+   "race": "Tomb Kings"
+  },
+  {
+   "nation": "Romania",
+   "shown": "Stikman",
+   "race": "Shambling Undead"
+  },
+  {
+   "nation": "Romania",
+   "shown": "Thomas Bang",
+   "race": "Amazon"
+  },
+  {
+   "nation": "Romania",
+   "shown": "Tiberu Stoica",
+   "race": "Nurgle"
+  },
+  {
+   "nation": "Scotland",
+   "shown": "Anthony Purdie",
+   "race": "Human"
+  },
+  {
+   "nation": "Scotland",
+   "shown": "Jock",
+   "race": "High Elf"
+  },
+  {
+   "nation": "Scotland",
+   "shown": "Mike Davies (sa…)",
+   "race": "Amazon"
+  },
+  {
+   "nation": "Slovenia",
+   "shown": "Gregor Sod",
+   "race": "Human"
+  },
+  {
+   "nation": "Slovenia",
+   "shown": "Ignaz",
+   "race": "Bretonnian"
+  },
+  {
+   "nation": "Slovenia",
+   "shown": "Lockmund",
+   "race": "Chaos Chosen"
+  },
+  {
+   "nation": "Slovenia",
+   "shown": "Milan G.",
+   "race": "High Elf"
+  },
+  {
+   "nation": "Slovenia",
+   "shown": "Primož Pirš",
+   "race": "Elven Union"
+  },
+  {
+   "nation": "Slovenia",
+   "shown": "Shimigami (Pino)",
+   "race": "Dark Elf"
+  },
+  {
+   "nation": "Spain",
+   "shown": "Felipe Caballero",
+   "race": "Chaos Dwarf"
+  },
+  {
+   "nation": "Spain",
+   "shown": "Salva",
+   "race": "Human"
+  },
+  {
+   "nation": "Sweden",
+   "shown": "Qzt",
+   "race": "Orc"
+  },
+  {
+   "nation": "Switzerland",
+   "shown": "Alexander Buch…",
+   "race": "Human"
+  },
+  {
+   "nation": "Switzerland",
+   "shown": "Alexander Sieb…",
+   "race": "High Elf"
+  },
+  {
+   "nation": "USA",
+   "shown": "Bryan Tew",
+   "race": "Old World Alliance"
+  },
+  {
+   "nation": "USA",
+   "shown": "Gavin LeClair",
+   "race": "Human"
+  },
+  {
+   "nation": "USA",
+   "shown": "jj tew",
+   "race": "Norse"
+  },
+  {
+   "nation": "USA",
+   "shown": "Jon Lackey",
+   "race": "High Elf"
+  },
+  {
+   "nation": "USA",
+   "shown": "Patrick LeClair",
+   "race": "Necromantic Horror"
+  },
+  {
+   "nation": "USA",
+   "shown": "Seaspirit",
+   "race": "Elven Union"
+  },
+  {
+   "nation": "Ukraine",
+   "shown": "Alex Rozdymak…",
+   "race": "High Elf"
+  },
+  {
+   "nation": "Ukraine",
+   "shown": "Muzrub",
+   "race": "Elven Union"
+  },
+  {
+   "nation": "Ukraine",
+   "shown": "OlehSkaven",
+   "race": "Imperial Nobility"
+  },
+  {
+   "nation": "Wales",
+   "shown": "James Hayward",
+   "race": "Orc"
+  },
+  {
+   "nation": "Wales",
+   "shown": "Richard Powell",
+   "race": "Elven Union"
+  }
+ ]
+}
