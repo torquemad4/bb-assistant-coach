@@ -6,6 +6,7 @@ const LABEL: Record<CountryCode, string> = {
   finland: 'Finland',
   austria: 'Austria',
   slovenia: 'Slovenia',
+  malta: 'Malta',
 }
 
 /**
@@ -58,6 +59,15 @@ export function Flag({ country }: { country: CountryCode | null }) {
           <rect width="15" height="10" fill="#f2f2f0" />
           <rect y="3.33" width="15" height="3.34" fill="#0000a0" />
           <rect y="6.67" width="15" height="3.33" fill="#d52b1e" />
+        </>
+      )}
+      {country === 'malta' && (
+        <>
+          <rect width="15" height="10" fill="#f2f2f0" />
+          <rect x="7.5" width="7.5" height="10" fill="#cf142b" />
+          {/* The George Cross, reduced to a legible mark: at 15x10 the real
+              device is a grey smudge, and a plain white half reads as Poland. */}
+          <path d="M1.2 1.7h2.4v0.9H2.9v1.4h-0.9V2.6H1.2z" fill="#bdbdbd" />
         </>
       )}
     </svg>
