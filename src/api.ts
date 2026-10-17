@@ -502,7 +502,14 @@ export async function refreshScouting(opts: { resolveByName?: boolean; scope?: s
   if (opts.scope) query.set('scope', opts.scope)
   const suffix = query.toString() ? `?${query}` : ''
 
-  const response = await fetch(`/api/scout/refresh${suffix}`, {
+  // Through `scoped`, like every other call. This one built its own URL and so
+  // carried no `t=`, which meant the server fell back to whichever tournament
+  // was live rather than the one on screen. Scouting the EurOpen from the
+  // EurOpen pulled the Eurobowl's boards, wrote the Eurobowl's scout row, and
+  // pasted the Eurobowl's figures onto the EurOpen's four boards. It went
+  // unnoticed for as long as there was only ever one event in play.
+  // `scoped` joins with & when a query string is already there.
+  const response = await fetch(scoped(`/api/scout/refresh${suffix}`), {
     method: 'POST',
     headers: { accept: 'application/json' },
   })
