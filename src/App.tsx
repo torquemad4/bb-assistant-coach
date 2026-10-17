@@ -31,6 +31,18 @@ export default function App() {
   const controller = useRound({ canSync: identity.canCoordinate })
   const { round, connection, loadError, isDirty, reload } = controller
 
+  // Whether this viewer has a board is a fact about the round on screen, and it
+  // changes every time the draw does. `identity` is read once per session, so
+  // asking it would offer the tab on last round's answer: a coach drawn in
+  // round 2 but not round 1 would never see it, and one who sat out round 2
+  // would be offered a board they no longer have. The round payload is always
+  // current, so ask that.
+  const hasBoard =
+    identity.nafNumber != null &&
+    round.boards.some(
+      (b) => b.a.nafNumber === identity.nafNumber || b.b.nafNumber === identity.nafNumber,
+    )
+
   // Match Control can rewrite every board, so it needs the coordinator's role —
   // held, or lent by open coordinator mode. The server decides the same way, so
   // the tab is offered exactly when a write would be accepted: a control that
@@ -44,7 +56,7 @@ export default function App() {
   // My Board appears only for somebody who actually has one.
   const tabs = useMemo(() => {
     const list: { id: Tab; label: string }[] = []
-    if (identity.board) list.push({ id: 'myboard', label: 'My Board' })
+    if (hasBoard) list.push({ id: 'myboard', label: 'My Board' })
     list.push({ id: 'dashboard', label: 'Dashboard' }, { id: 'prematch', label: 'Pre-Match' })
     // Rosters is reference every coach wants and nobody can break — it reads a
     // bundled snapshot and writes nothing — so it sits in the open part of the
@@ -61,12 +73,12 @@ export default function App() {
     // it survives the coordinator role being handed to somebody else.
     if (identity.isOwner) list.push({ id: 'admin', label: 'Admin' })
     return list
-  }, [identity.board, identity.canCoordinate, identity.isAdmin, identity.isOwner])
+  }, [hasBoard, identity.canCoordinate, identity.isAdmin, identity.isOwner])
 
   // A coach opening this on their phone wants their own board, not the hall
   // dashboard. Only once identity has actually answered, or it would flick.
   const [chosen, setChosen] = useState<Tab | null>(null)
-  const tab: Tab = chosen ?? (identityLoaded && identity.board ? 'myboard' : 'dashboard')
+  const tab: Tab = chosen ?? (identityLoaded && hasBoard ? 'myboard' : 'dashboard')
 
   const setTab = (next: Tab) => {
     setChosen(next)

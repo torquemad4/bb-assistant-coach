@@ -104,8 +104,39 @@ export function MyBoard({
   identity: Identity
 }) {
   const { round, aggregate, connection } = controller
-  const seat = identity.board
-  const board = seat ? round.boards.find((b) => b.id === seat.id) : undefined
+  // The seat is worked out from the round on screen, not from `identity`.
+  //
+  // `/api/me` reports which board you are on, and that is a fact about the
+  // ROUND, not about you — it was read once at sign-in because an Access
+  // session outlives a round, which is true of everything else it returns and
+  // false of this. At Eurobowl round 2 Karl moved from board 7 to board 5, his
+  // browser still held 7, and so this view rendered a different coach's game:
+  // his taps saved to his real board (the server finds it by NAF number and
+  // ignores anything the client claims) and the next poll redrew board 7
+  // unchanged, which reads as the app refusing to save.
+  //
+  // Deriving it here means the seat and the board always come from the same
+  // snapshot and cannot disagree. `identity.board` is kept only as a fallback
+  // for a viewer whose number we do not have.
+  const mineHere = identity.nafNumber
+  const found = mineHere == null
+    ? undefined
+    : round.boards.find(
+        (b) => b.a.nafNumber === mineHere || b.b.nafNumber === mineHere,
+      )
+  const board = found ?? (identity.board ? round.boards.find((b) => b.id === identity.board!.id) : undefined)
+  const seat = board
+    ? {
+        id: board.id,
+        side: (board.a.nafNumber === mineHere ? 'a' : board.b.nafNumber === mineHere ? 'b' : identity.board?.side ?? 'a') as 'a' | 'b',
+        opponent:
+          board.a.nafNumber === mineHere
+            ? board.b.nafName
+            : board.b.nafNumber === mineHere
+              ? board.a.nafName
+              : identity.board?.opponent ?? '',
+      }
+    : null
 
   const [status, setStatus] = useState<Status>('idle')
   const [error, setError] = useState<string | null>(null)
