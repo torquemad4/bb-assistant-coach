@@ -664,6 +664,7 @@ const FLAGS: Record<string, string> = {
   italy: 'italy',
   finland: 'finland',
   austria: 'austria',
+  slovenia: 'slovenia',
 }
 
 /**
