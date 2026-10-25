@@ -568,3 +568,10 @@ cloud session rather than your own machine.
 Tick *"Also include default list of common package managers"*, or npm and GitHub
 stop working. The change applies to sessions started afterwards — a running session
 never re-reads it.
+
+## Hosting and access (read from the Cloudflare account, 25 Oct 2026)
+
+- **Worker** `bb-round-coordinator` → https://coordinator.englandbb.co.uk · cron `* * * * *` · workers.dev off · deployed from `claude/blood-bowl-coordinator-app-eiqhpk` by `.github/workflows/deploy.yml`
+- **D1** `bb-coordinator` = `505406d3-dc0a-4e94-ae30-17a295a506db`
+- **Access** coordinator.englandbb.co.uk: 13 emails (Karl plus the Team England coordinators), not Karl only. ⚠️ No waiver recorded; record it here.
+- ⚠️ The repo name (`bb-assistant-coach`) differs from the Worker (`bb-round-coordinator`).
